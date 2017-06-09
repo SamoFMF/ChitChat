@@ -12,17 +12,19 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 
 import javax.swing.ButtonGroup;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
-import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
-import javax.swing.JList;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
@@ -32,7 +34,6 @@ import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
 import javax.swing.JSlider;
 import javax.swing.JSplitPane;
-import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.JTextPane;
 import javax.swing.event.ChangeEvent;
@@ -43,6 +44,7 @@ import javax.swing.text.SimpleAttributeSet;
 import javax.swing.text.StyleConstants;
 import javax.swing.text.StyleContext;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.util.ISO8601DateFormat;
 
@@ -53,13 +55,13 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 	 * @param input - Input window for your message
 	 */
 	private static final long serialVersionUID = 1L;
-	protected JTextField input;
-	protected JTextField imeEditor;
+	private JTextField input;
+	private JTextField imeEditor;
 	private JButton gumbPrijavi;
 	private JButton gumbOdjavi;
 	private String komuPosiljamo;
 	private RobotZaSporocila robot;
-	protected JTextArea dosegljivi;
+	private JTextPane dosegljivi;
 	private RobotDosegljivi robotDosegljivi;
 	private JSplitPane splitter;
 	private Color colorMyName, colorOthers, colorMe, colorMsgOthers;
@@ -68,19 +70,17 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 	private JMenu fileMenu;
 	private JMenuItem miLogin, miLogout;
 	private JMenu optionsMenu;
-	private ButtonGroup groupColorsMyName, groupColorsOthers, groupColorsMe, groupColorsMsgOthers;
-	private JRadioButtonMenuItem cbRedMyName, cbGreenMyName, cbBlueMyName, cbBlackMyName; // Barve za imena pri sporoèilih, ki jih pošlje uporabnik
-	private JRadioButtonMenuItem cbRedOthers, cbGreenOthers, cbBlueOthers, cbBlackOthers; // Barve za imena pri sporoèilih, ki jih pošljejo ostali
-	private JRadioButtonMenuItem cbRedMe, cbGreenMe, cbBlueMe, cbBlackMe; // Barve za sporoèila, ki jih pošlje uporabnik
-	private JRadioButtonMenuItem cbRedMsgOthers, cbGreenMsgOthers, cbBlueMsgOthers, cbBlackMsgOthers; // Barve za sporoèila, ki jih pošljejo ostali
+	private ButtonGroup groupColorsMyName, groupColorsOthers, groupColorsMe, groupColorsMsgOthers, groupColorsBg;
+	private JRadioButtonMenuItem cbRedMyName, cbGreenMyName, cbBlueMyName, cbBlackMyName, cbCyanMyName, cbMagentaMyName, cbOrangeMyName; // Barve za imena pri sporoèilih, ki jih pošlje uporabnik -- Imena imajo cb na zaèetku, ker so prvotni bili CheckBoxi
+	private JRadioButtonMenuItem cbRedOthers, cbGreenOthers, cbBlueOthers, cbBlackOthers, cbCyanOthers, cbMagentaOthers, cbOrangeOthers; // Barve za imena pri sporoèilih, ki jih pošljejo ostali
+	private JRadioButtonMenuItem cbRedMe, cbGreenMe, cbBlueMe, cbBlackMe, cbCyanMe, cbMagentaMe, cbOrangeMe; // Barve za sporoèila, ki jih pošlje uporabnik
+	private JRadioButtonMenuItem cbRedMsgOthers, cbGreenMsgOthers, cbBlueMsgOthers, cbBlackMsgOthers, cbCyanMsgOthers, cbMagentaMsgOthers, cbOrangeMsgOthers; // Barve za sporoèila, ki jih pošljejo ostali
+	private JRadioButtonMenuItem cbWhiteBg, cbBlackBg, cbGrayBg;
 	private JSlider fontSizeSlider;
 	private int fontSize;
-	private String[] testNames;
 	private JComboBox<String> whoMenu;
 	private String[] online;
-	private Container pane;
-	private GridBagConstraints grid;
-	protected JTextPane test;
+	private Map<String, Long> lastActive;
 
 	public ChatFrame() {
 		super();
@@ -91,10 +91,13 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		
 		// Nastavimo default barve in velikost pisave
 		colorMyName = Color.BLUE;
-		colorMe = Color.red;
-		colorOthers = Color.GREEN;
-		colorMsgOthers = Color.black;
+		colorMe = Color.RED;
+		colorOthers = Color.CYAN;
+		colorMsgOthers = Color.ORANGE;
 		fontSize = 12;
+		
+		// Nastavimo zaèetni set lastActive
+		lastActive = new TreeMap<String, Long>();
 		
 		// Dodajmo zgornji menu
 		// Najprej dodamo menu bar
@@ -116,15 +119,18 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		miExit.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				if (gumbOdjavi.isEnabled()) {
+					// Izklopimo oba robota
+					robot.cancel();
+					robotDosegljivi.cancel();
 					// Imamo prijavljenega uporabnika					
 					try {
 						// Uporabnika poizkusimo odjaviti
 						HttpCommands.odjava(imeEditor.getText());
-						// Izklopimo oba robota
-						robot.cancel();
-						robotDosegljivi.cancel();
 						System.exit(0);
 					} catch (Exception e1) {
+						// Tu je uporabniku bolj kot ne vseeno
+						// On je zaprl aplikacijo, vsi roboti itd. so se izklopili
+						// Edino kar se je zgodilo je, da je ostal 'vpisan' in se bo morda moral vpisati z drugim uporabniškim imenom
 						System.out.println("Neuspešna odjava!");
 					}
 				} else {
@@ -138,56 +144,79 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		// Ustvarimo menu "Options"
 		optionsMenu = new JMenu("Options");
 		// Ustvarimo podmenu "Color"
-		JMenu colorSubMenu = new JMenu("Color");
+		JMenu colorSubMenu = new JMenu("Font color");
 		// Ustvarimo subsubmenu "Names"
 		JMenu namesSubSubMenu = new JMenu("Names");
 		// Ustvarimo subsubsubmenu "My name"
 		JMenu myName = new JMenu("My name");
-		cbRedMyName = new JRadioButtonMenuItem("Red", true);
-		cbBlueMyName = new JRadioButtonMenuItem("Blue");
+		cbRedMyName = new JRadioButtonMenuItem("Red");
+		cbBlueMyName = new JRadioButtonMenuItem("Blue", true);
 		cbGreenMyName = new JRadioButtonMenuItem("Green");
 		cbBlackMyName = new JRadioButtonMenuItem("Black");
+		cbCyanMyName = new JRadioButtonMenuItem("Cyan");
+		cbMagentaMyName = new JRadioButtonMenuItem("Magenta");
+		cbOrangeMyName = new JRadioButtonMenuItem("Orange");
 		// Dodamo možnosti v submenu "Color"
 		myName.add(cbBlueMyName);
 		myName.add(cbRedMyName);
 		myName.add(cbGreenMyName);
 		myName.add(cbBlackMyName);
+		myName.add(cbCyanMyName);
+		myName.add(cbMagentaMyName);
+		myName.add(cbOrangeMyName);
 		// Dodamo te barve v grupo, ki bo poskrbela, da imamo lahko izbrano le 1
 		groupColorsMyName = new ButtonGroup();
 		groupColorsMyName.add(cbBlueMyName);
 		groupColorsMyName.add(cbRedMyName);
 		groupColorsMyName.add(cbGreenMyName);
 		groupColorsMyName.add(cbBlackMyName);
+		groupColorsMyName.add(cbCyanMyName);
+		groupColorsMyName.add(cbMagentaMyName);
+		groupColorsMyName.add(cbOrangeMyName);
 		// Dodamo listenerje
 		cbRedMyName.addActionListener(this);
 		cbBlueMyName.addActionListener(this);
 		cbGreenMyName.addActionListener(this);
 		cbBlackMyName.addActionListener(this);
+		cbCyanMyName.addActionListener(this);
+		cbMagentaMyName.addActionListener(this);
+		cbOrangeMyName.addActionListener(this);
 		// Dodamo "My name" v "Names"
 		namesSubSubMenu.add(myName);
 		// Ustvarimo subsubsubmenu "Others"
 		JMenu otherNames = new JMenu("Others");
-		cbRedOthers = new JRadioButtonMenuItem("Red", true);
+		cbRedOthers = new JRadioButtonMenuItem("Red");
 		cbBlueOthers = new JRadioButtonMenuItem("Blue");
 		cbGreenOthers = new JRadioButtonMenuItem("Green");
 		cbBlackOthers = new JRadioButtonMenuItem("Black");
+		cbCyanOthers = new JRadioButtonMenuItem("Cyan", true);
+		cbMagentaOthers = new JRadioButtonMenuItem("Magenta");
+		cbOrangeOthers = new JRadioButtonMenuItem("Orange");
 		// Dodamo možnosti v submenu "Color"
 		otherNames.add(cbBlueOthers);
 		otherNames.add(cbRedOthers);
 		otherNames.add(cbGreenOthers);
 		otherNames.add(cbBlackOthers);
+		otherNames.add(cbCyanOthers);
+		otherNames.add(cbMagentaOthers);
+		otherNames.add(cbOrangeOthers);
 		// Dodamo te barve v grupo, ki bo poskrbela, da imamo lahko izbrano le 1
 		groupColorsOthers = new ButtonGroup();
 		groupColorsOthers.add(cbBlueOthers);
 		groupColorsOthers.add(cbRedOthers);
 		groupColorsOthers.add(cbGreenOthers);
 		groupColorsOthers.add(cbBlackOthers);
+		groupColorsOthers.add(cbCyanOthers);
+		groupColorsOthers.add(cbMagentaOthers);
+		groupColorsOthers.add(cbOrangeOthers);
 		// Dodamo listenerje
 		cbRedOthers.addActionListener(this);
 		cbBlueOthers.addActionListener(this);
 		cbGreenOthers.addActionListener(this);
 		cbBlackOthers.addActionListener(this);
-		cbRedOthers.addActionListener(this);
+		cbCyanOthers.addActionListener(this);
+		cbMagentaOthers.addActionListener(this);
+		cbOrangeOthers.addActionListener(this);
 		// Dodamo "Others" v "Names"
 		namesSubSubMenu.add(otherNames);
 		// Dodamo "Names" v "Color"
@@ -201,48 +230,70 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		cbBlueMe = new JRadioButtonMenuItem("Blue");
 		cbGreenMe = new JRadioButtonMenuItem("Green");
 		cbBlackMe = new JRadioButtonMenuItem("Black");
+		cbCyanMe = new JRadioButtonMenuItem("Cyan");
+		cbMagentaMe = new JRadioButtonMenuItem("Magenta");
+		cbOrangeMe = new JRadioButtonMenuItem("Orange");
 		// Dodamo možnosti v submenu "Color"
 		myMessages.add(cbBlueMe);
 		myMessages.add(cbRedMe);
 		myMessages.add(cbGreenMe);
 		myMessages.add(cbBlackMe);
+		myMessages.add(cbCyanMe);
+		myMessages.add(cbMagentaMe);
+		myMessages.add(cbOrangeMe);
 		// Dodamo te barve v grupo, ki bo poskrbela, da imamo lahko izbrano le 1
 		groupColorsMe = new ButtonGroup();
 		groupColorsMe.add(cbBlueMe);
 		groupColorsMe.add(cbRedMe);
 		groupColorsMe.add(cbGreenMe);
 		groupColorsMe.add(cbBlackMe);
+		groupColorsMe.add(cbCyanMe);
+		groupColorsMe.add(cbMagentaMe);
+		groupColorsMe.add(cbOrangeMe);
 		// Dodamo listenerje
 		cbRedMe.addActionListener(this);
 		cbBlueMe.addActionListener(this);
 		cbGreenMe.addActionListener(this);
 		cbBlackMe.addActionListener(this);
-		cbRedMe.addActionListener(this);
+		cbCyanMe.addActionListener(this);
+		cbMagentaMe.addActionListener(this);
+		cbOrangeMe.addActionListener(this);
 		// Dodamo "My messages" v "Messages"
 		messagesSubSubMenu.add(myMessages);
 		// Ustvarimo subsubsubmenu "Other"
 		JMenu otherMessages = new JMenu("Other");
-		cbRedMsgOthers = new JRadioButtonMenuItem("Red", true);
+		cbRedMsgOthers = new JRadioButtonMenuItem("Red");
 		cbBlueMsgOthers = new JRadioButtonMenuItem("Blue");
 		cbGreenMsgOthers = new JRadioButtonMenuItem("Green");
 		cbBlackMsgOthers = new JRadioButtonMenuItem("Black");
+		cbCyanMsgOthers = new JRadioButtonMenuItem("Cyan");
+		cbMagentaMsgOthers = new JRadioButtonMenuItem("Magenta");
+		cbOrangeMsgOthers = new JRadioButtonMenuItem("Orange", true);
 		// Dodamo možnosti v submenu "Color"
 		otherMessages.add(cbBlueMsgOthers);
 		otherMessages.add(cbRedMsgOthers);
 		otherMessages.add(cbGreenMsgOthers);
 		otherMessages.add(cbBlackMsgOthers);
+		otherMessages.add(cbCyanMsgOthers);
+		otherMessages.add(cbMagentaMsgOthers);
+		otherMessages.add(cbOrangeMsgOthers);
 		// Dodamo te barve v grupo, ki bo poskrbela, da imamo lahko izbrano le 1
 		groupColorsMsgOthers = new ButtonGroup();
 		groupColorsMsgOthers.add(cbBlueMsgOthers);
 		groupColorsMsgOthers.add(cbRedMsgOthers);
 		groupColorsMsgOthers.add(cbGreenMsgOthers);
 		groupColorsMsgOthers.add(cbBlackMsgOthers);
+		groupColorsMsgOthers.add(cbCyanMsgOthers);
+		groupColorsMsgOthers.add(cbMagentaMsgOthers);
+		groupColorsMsgOthers.add(cbOrangeMsgOthers);
 		// Dodamo listenerje
 		cbRedMsgOthers.addActionListener(this);
 		cbBlueMsgOthers.addActionListener(this);
 		cbGreenMsgOthers.addActionListener(this);
 		cbBlackMsgOthers.addActionListener(this);
-		cbRedMsgOthers.addActionListener(this);
+		cbCyanMsgOthers.addActionListener(this);
+		cbMagentaMsgOthers.addActionListener(this);
+		cbOrangeMsgOthers.addActionListener(this);
 		// Dodamo "Other" v "Messages"
 		messagesSubSubMenu.add(otherMessages);
 		// Dodamo "Messages" v "Colors"
@@ -268,6 +319,27 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		fontSizeSubMenu.add(fontSizeSlider);
 		// Dodamo podmenu v menu "Options"
 		optionsMenu.add(fontSizeSubMenu);
+		
+		// Ustvarimo podmenu "Background color"
+		JMenu bgColorSubMenu = new JMenu("Background color");
+		cbWhiteBg = new JRadioButtonMenuItem("White", true);
+		cbGrayBg = new JRadioButtonMenuItem("Gray");
+		cbBlackBg = new JRadioButtonMenuItem("Black");
+		// Dodamo možnosti v submetu bg color
+		bgColorSubMenu.add(cbWhiteBg);
+		bgColorSubMenu.add(cbGrayBg);
+		bgColorSubMenu.add(cbBlackBg);
+		// Dodamo te barve v grupo, ki bo poskrbela, da imamo lahko izbrano le 1
+		groupColorsBg = new ButtonGroup();
+		groupColorsBg.add(cbWhiteBg);
+		groupColorsBg.add(cbGrayBg);
+		groupColorsBg.add(cbBlackBg);
+		// Dodamo listenerje
+		cbWhiteBg.addActionListener(this);
+		cbGrayBg.addActionListener(this);
+		cbBlackBg.addActionListener(this);
+		// Dodamo bg color submenu v menu options
+		optionsMenu.add(bgColorSubMenu);
 		// Dodamo menu "Options" v menuBar
 		menuBar.add(optionsMenu);
 		
@@ -314,6 +386,7 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		// Polje kamor bodo izpisana sporoèila
 		output = new JTextPane();
 		output.setEditable(false);
+		output.setBackground(Color.WHITE);
 		JScrollPane drsnikLevo = new JScrollPane(output);
 		scrollToBottom(drsnikLevo);
 		GridBagConstraints outputConstraint = new GridBagConstraints();
@@ -325,7 +398,7 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		levo.add(drsnikLevo, outputConstraint);
 		
 		// Polje kamor bo izpisan seznam dosegljivih uporabnikov
-		dosegljivi = new JTextArea(20, 10);
+		dosegljivi = new JTextPane();
 		dosegljivi.setEditable(false);
 		JScrollPane drsnikDesno = new JScrollPane(dosegljivi);
 		GridBagConstraints dosegljiviConstraint = new GridBagConstraints();
@@ -377,6 +450,7 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		// Splitter, ki loèi levo in desno stran
 		splitter = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, levo, desno);
 		splitter.setOneTouchExpandable(true);
+		splitter.setResizeWeight(1);
 		GridBagConstraints splitterConstraint = new GridBagConstraints();
 		splitterConstraint.gridx = 0;
 		splitterConstraint.gridy = 1;
@@ -390,43 +464,37 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		
 		// Doloèimo, da se okno zapre in ne le skrije, èe kliknemo križec
 		setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-		
-		// Testiramo
-		test = new JTextPane();
-		addOnlineUser("Samo", true);
-		addOnlineUser("Samo", false);
-		addOnlineUser("Testni uporabnik");
-		
-		GridBagConstraints grid = new GridBagConstraints();
-		grid.gridx = 0;
-		grid.gridy = 2;
-		grid.fill = GridBagConstraints.BOTH;
-		grid.weightx = 1;
-		grid.weighty = 0;
-		pane.add(test, grid);
 	}
 	
 	public void addOnlineUser(String name, boolean isAway) {
+		Color c;
+		if (dosegljivi.getBackground().equals(Color.BLACK)) {
+			c = Color.WHITE;
+		} else {
+			c = Color.BLACK;
+		}
+		
 		StyleContext sc = StyleContext.getDefaultStyleContext();
-		AttributeSet aset = sc.addAttribute(SimpleAttributeSet.EMPTY, StyleConstants.Foreground, Color.BLACK);
+		AttributeSet aset = sc.addAttribute(SimpleAttributeSet.EMPTY, StyleConstants.Foreground, c);
 		
 		aset = sc.addAttribute(aset, StyleConstants.Alignment, StyleConstants.ALIGN_JUSTIFIED);
 		aset = sc.addAttribute(aset, StyleConstants.FontSize, fontSize);
 		
-		int len = test.getDocument().getLength();
+		int len = dosegljivi.getDocument().getLength();
 		try {
-			test.getDocument().insertString(len, name, aset);
-			len = test.getDocument().getLength();
+			dosegljivi.getDocument().insertString(len, name, aset);
+			len = dosegljivi.getDocument().getLength();
 			if (isAway) {
 				aset = sc.addAttribute(aset, StyleConstants.Italic, true);
 				aset = sc.addAttribute(aset, StyleConstants.FontSize, fontSize-3);
-				test.getDocument().insertString(len, "   (Away)\n" , aset);
+				dosegljivi.getDocument().insertString(len, "   (Away)\n" , aset);
 			} else {
-				test.getDocument().insertString(len, "\n", aset);
+				dosegljivi.getDocument().insertString(len, "\n", aset);
 			}
 		} catch (BadLocationException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			// Do tega exceptiona naèeloma ne bi smelo priti, ker vedno postavljamo index na zadnje mesto
+			// v dokumentu, ki ga pa izraèunamo tik pred tem
+			System.out.println("Iz nekega razloga smo dobili pri \"addOnlineUsers\" index iz mej!");
 		}
 	}
 	
@@ -435,7 +503,7 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 	}
 	
 	public void addAllOnlineUsers(List<Uporabnik> users) {
-		test.setText("");
+		dosegljivi.setText("");
 		for (Uporabnik i : users) {
 			addOnlineUser(i.getUsername(), checkIfAway(i));
 		}
@@ -469,15 +537,7 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 	    verticalBar.addAdjustmentListener(downScroller);
 	}
 	
-	public JComboBox<String> getTestMenu() {
-		return whoMenu;
-	}
-
-	public void setTestMenu(JComboBox<String> testMenu) {
-		this.whoMenu = testMenu;
-	}
-	
-	public void testBox(String[] online) {
+	public void updateWhoMenu(String[] online) {
 		DefaultComboBoxModel<String> model = new DefaultComboBoxModel<String>(online);
 		model.setSelectedItem(null);
 		whoMenu.setModel(model);
@@ -487,8 +547,15 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 	 * @param message - the message content
 	 */
 	private void adminMessage(String message) {
+		Color c;
+		if (output.getBackground().equals(Color.BLACK)) {
+			c = Color.WHITE;
+		} else {
+			c = Color.BLACK;
+		}
+		
 		StyleContext sc = StyleContext.getDefaultStyleContext();
-		AttributeSet aset = sc.addAttribute(SimpleAttributeSet.EMPTY, StyleConstants.Foreground, Color.BLACK);
+		AttributeSet aset = sc.addAttribute(SimpleAttributeSet.EMPTY, StyleConstants.Foreground, c);
 		
 		aset = sc.addAttribute(aset, StyleConstants.FontFamily, "Impact");
 		aset = sc.addAttribute(aset, StyleConstants.Alignment, StyleConstants.ALIGN_JUSTIFIED);
@@ -497,7 +564,9 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		try {
 			output.getDocument().insertString(len, message + '\n', aset);
 		} catch (BadLocationException e) {
-			System.out.println("Prišlo je do napake pri izpisu sporoèila, kar se ne bi smelo zgoditi!");
+			// Do tega exceptiona naèeloma ne bi smelo priti, ker vedno postavljamo index na zadnje mesto
+			// v dokumentu, ki ga pa izraèunamo tik pred tem
+			System.out.println("Iz nekega razloga smo dobili pri \"adminMessage\" index iz mej!");
 		}
 	}
 	
@@ -525,7 +594,9 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 				output.getDocument().insertString(len, sender + " -> " + recipient + ":  ", aset);
 			}
 		} catch (BadLocationException e) {
-			System.out.println("Prišlo je do napake pri izpisu sporoèila, kar se ne bi smelo zgoditi!");
+			// Do tega exceptiona naèeloma ne bi smelo priti, ker vedno postavljamo index na zadnje mesto
+			// v dokumentu, ki ga pa izraèunamo tik pred tem
+			System.out.println("Iz nekega razloga smo dobili pri \"addSender\" index iz mej!");
 		}
 	}
 	
@@ -552,7 +623,9 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		try {
 			output.getDocument().insertString(len, message + '\n', aset);
 		} catch (BadLocationException e) {
-			System.out.println("Prišlo je do napake pri izpisu sporoèila, kar se ne bi smelo zgoditi!");
+			// Do tega exceptiona naèeloma ne bi smelo priti, ker vedno postavljamo index na zadnje mesto
+			// v dokumentu, ki ga pa izraèunamo tik pred tem
+			System.out.println("Iz nekega razloga smo dobili pri \"addContent\" index iz mej!");
 		}
 	}
 	
@@ -573,61 +646,168 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		this.online = online;
 	}
 
+	public JTextField getImeEditor() {
+		return imeEditor;
+	}
+
+	public void setImeEditor(JTextField imeEditor) {
+		this.imeEditor = imeEditor;
+	}
+	
+	public List<Uporabnik> getAllOnlineUsersList() {
+		// TODO - lahko uporabiš v `RobotDosegljivi` - zaenkrat le za preverjanje, èe user online
+		List<Uporabnik> uporabniki;
+		try {
+			String jsonUporabniki = HttpCommands.pridobiUporabnike();
+			ObjectMapper mapper = new ObjectMapper();
+			mapper.setDateFormat(new ISO8601DateFormat());
+			TypeReference<List<Uporabnik>> t = new TypeReference<List<Uporabnik>>() { };
+			uporabniki = mapper.readValue(jsonUporabniki, t);
+			return uporabniki;
+		} catch (Exception e) {
+			e.printStackTrace();
+			adminMessage("Povezava s strežnikom prekinjena!");
+			System.out.println("Prišlo je do težav s povezavo med uporabnikom in strežnikom.");
+			return new ArrayList<Uporabnik>();
+		}
+	}
+	
+	public boolean isOnline(String name) {
+		List<Uporabnik> users = getAllOnlineUsersList();
+		boolean on = false;
+		for (Uporabnik i : users) {
+			if (i.getUsername().equals(name)) {
+				on = true;
+				break;
+			}
+		}
+		return on;
+	}
+	
+	/**
+	 * Asks server for our messages and writes them down on {@code output}
+	 */
+	public void writeMessages() {
+		try {
+			String jsonSporocila = HttpCommands.pridobiSporocila(imeEditor.getText());
+			ObjectMapper mapper = new ObjectMapper();
+			TypeReference<List<Sporocilo>> t = new TypeReference<List<Sporocilo>>() { };
+			List<Sporocilo> sporocila = mapper.readValue(jsonSporocila, t);
+			
+			for (Sporocilo i : sporocila) {
+				if (i.isGlobal()) {
+					addMessage(i.getPosiljatelj(), i.getMsg(), "Others");
+				} else {
+					addMessage(i.getPosiljatelj(), i.getPrejemnik(), i.getMsg(), "Others");
+				}
+			}
+		} catch (Exception e) {
+			// Preverimo, èe je uporabnik še online
+			if (!isOnline(imeEditor.getText())) {
+				// Uporabnik ni veè vpisan
+				// Poizkusimo ga izpisati in ponovno vpisati
+				userLogout();
+				userLogin();
+				if (isOnline(imeEditor.getText())) {
+					// Uspešno smo ga vpisali!
+					adminMessage("Prišlo je do neprièakovanih težav. Morda ste izgubili kakšno sporoèilo.");
+					System.out.println("Uporabnik je bil uspešno vpisan nazaj!");
+				} else {
+					// Prijava ni uspela
+					userLogout();
+				}
+			} else {
+				adminMessage("Prišlo je do neprièakovanih težav. Morda ste izgubili kakšno sporoèilo.");
+				System.out.println("Zaradi neznane težave sporoèil nismo uspeli pridobiti!");
+			}
+		}
+	}
+	
+	public void userLogin() {
+		try {
+			// Poizkusimo se prijaviti
+			if (imeEditor.getText().isEmpty()) imeEditor.setText(System.getProperty("user.name"));
+			
+			HttpCommands.prijava(imeEditor.getText());
+			
+			// Primerno vklopimo / izklopimo razna polja & gumbe
+			imeEditor.setEditable(false);
+			gumbPrijavi.setEnabled(false);
+			gumbOdjavi.setEnabled(true);
+			input.setEditable(true);
+			whoMenu.setEnabled(true);
+			
+			// Uporabniku sporoèimo, da se je uspešno prijavil
+			adminMessage("Uspešno ste se prijavili!");
+			
+			// Vklopimo robota, ki nam bo prikazoval sporoèila ostalih
+			robot = new RobotZaSporocila(this);
+			robot.activate();
+			
+			// Vklopimo robota, ki nam bo prikazoval dosegljive uporabnike
+			robotDosegljivi = new RobotDosegljivi(this);
+			robotDosegljivi.activate();
+		} catch (Exception e) {
+			adminMessage("Neuspešna prijava! Uporabnik s takšnim vzdevkom že obstaja.");
+			System.out.println("Neuspešna prijava! Username že obstaja.");
+		}
+	}
+	
+	public void userLogout() {
+		// Odjavimo oba robota
+		robot.cancel();
+		robotDosegljivi.cancel();
+		try {
+			// Uporabnika poizkusimo odjaviti
+			HttpCommands.odjava(imeEditor.getText());
+			
+			// Primerno vklopimo / izklopimo razna polja & gumbe
+			imeEditor.setEditable(true);
+			gumbPrijavi.setEnabled(true);
+			gumbOdjavi.setEnabled(false);
+			input.setEditable(false);
+			whoMenu.setEnabled(false);
+			
+			// Uporabniku sporoèimo, da se je uspešno odjavil
+			adminMessage("Uspešno ste se odjavili!");
+			
+			// Pobrišemo polje z dosegljivimi uporabniki
+			dosegljivi.setText("");
+		} catch (Exception e) {
+			System.out.println("Težave pri odjavi!");
+			
+			// Preverimo, èe je uporabnik še vpisan
+			if (isOnline(imeEditor.getText())) {
+				// Uporabnik je še vpisan
+				// To mu sporoèimo
+				adminMessage("Neuspešna odjava!");
+				System.out.println("Uporabnik je ostal vpisan, kljub zahtevi po odjavi!");
+				// Ponovno aktiviramo oba robota
+				robot = new RobotZaSporocila(this);
+				robot.activate();
+				robotDosegljivi = new RobotDosegljivi(this);
+				robotDosegljivi.activate();
+			} else {
+				// Uporabnik ni veè vpisan
+				// To mu sporoèimo
+				adminMessage("Uspešno ste se odjavili!");
+				System.out.println("Uporabnik se je odjavil, vendar ne po lastni želji!");
+				// Primerno vklopimo / izklopimo razna polja & gumbe
+				imeEditor.setEditable(true);
+				gumbPrijavi.setEnabled(true);
+				gumbOdjavi.setEnabled(false);
+				input.setEditable(false);
+				whoMenu.setEnabled(false);
+			}
+		}
+	}
+
 	@Override
 	public void actionPerformed(ActionEvent e) {
 		if (e.getSource().equals(gumbPrijavi) || e.getSource().equals(miLogin)) {
-			try {
-				// Poizkusimo se prijaviti
-				if (imeEditor.getText().isEmpty()) imeEditor.setText(System.getProperty("user.name"));
-				
-				HttpCommands.prijava(imeEditor.getText());
-				
-				// Primerno vklopimo / izklopimo razna polja & gumbe
-				imeEditor.setEditable(false);
-				gumbOdjavi.setEnabled(true);
-				gumbPrijavi.setEnabled(false);
-				input.setEditable(true);
-				whoMenu.setEnabled(true);
-				
-				// Uporabniku sporoèimo, da se je uspešno prijavil
-				adminMessage("Uspešno ste se prijavili!");
-				
-				// Vklopimo robota, ki nam bo prikazoval sporoèila ostalih
-				robot = new RobotZaSporocila(this);
-				robot.activate();
-				
-				// Vklopimo robota, ki nam bo prikazoval dosegljive uporabnike
-				robotDosegljivi = new RobotDosegljivi(this);
-				robotDosegljivi.activate();
-			} catch (Exception e1) {
-				adminMessage("Neuspešna prijava!");
-				System.out.println("Neuspešna prijava!");
-			}
+			userLogin();
 		} else if (e.getSource().equals(gumbOdjavi) || e.getSource().equals(miLogout)) {
-			try {
-				// Uporabnika poizkusimo odjaviti
-				HttpCommands.odjava(imeEditor.getText());
-				
-				// Primerno vklopimo / izklopimo razna polja & gumbe
-				imeEditor.setEditable(true);
-				gumbOdjavi.setEnabled(false);
-				gumbPrijavi.setEnabled(true);
-				input.setEditable(false);
-				whoMenu.setEnabled(false);
-				
-				// Uporabniku sporoèimo, da se je uspešno odjavil
-				adminMessage("Uspešno ste se odjavili!");
-				
-				// Odjavimo oba robota
-				robot.cancel();
-				robotDosegljivi.cancel();
-				
-				// Pobrišemo polje z dosegljivimi uporabniki
-				dosegljivi.setText("");
-			} catch (Exception e1) {
-				adminMessage("Neuspešna odjava!");
-				System.out.println("Neuspešna odjava!");
-			}
+			userLogout();
 		} else if (e.getSource().equals(cbRedMyName)) {
 			colorMyName = Color.RED;
 		} else if (e.getSource().equals(cbBlueMyName)) {
@@ -636,6 +816,12 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 			colorMyName = Color.GREEN;
 		} else if (e.getSource().equals(cbBlackMyName)) {
 			colorMyName = Color.BLACK;
+		} else if (e.getSource().equals(cbCyanMyName)) {
+			colorMyName = Color.CYAN;
+		} else if (e.getSource().equals(cbMagentaMyName)) {
+			colorMyName = Color.MAGENTA;
+		} else if (e.getSource().equals(cbOrangeMyName)) {
+			colorMyName = Color.ORANGE;
 		} else if (e.getSource().equals(cbRedOthers)) {
 			colorOthers = Color.RED;
 		} else if (e.getSource().equals(cbBlueOthers)) {
@@ -644,6 +830,12 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 			colorOthers = Color.GREEN;
 		} else if (e.getSource().equals(cbBlackOthers)) {
 			colorOthers = Color.BLACK;
+		} else if (e.getSource().equals(cbCyanOthers)) {
+			colorOthers = Color.CYAN;
+		} else if (e.getSource().equals(cbMagentaOthers)) {
+			colorOthers = Color.MAGENTA;
+		} else if (e.getSource().equals(cbOrangeOthers)) {
+			colorOthers = Color.ORANGE;
 		} else if (e.getSource().equals(cbRedMe)) {
 			colorMe = Color.RED;
 		} else if (e.getSource().equals(cbBlueMe)) {
@@ -652,6 +844,12 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 			colorMe = Color.GREEN;
 		} else if (e.getSource().equals(cbBlackMe)) {
 			colorMe = Color.BLACK;
+		} else if (e.getSource().equals(cbCyanMe)) {
+			colorMe = Color.CYAN;
+		} else if (e.getSource().equals(cbMagentaMe)) {
+			colorMe = Color.MAGENTA;
+		} else if (e.getSource().equals(cbOrangeMe)) {
+			colorMe = Color.ORANGE;
 		} else if (e.getSource().equals(cbRedMsgOthers)) {
 			colorMsgOthers = Color.RED;
 		} else if (e.getSource().equals(cbBlueMsgOthers)) {
@@ -660,11 +858,25 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 			colorMsgOthers = Color.GREEN;
 		} else if (e.getSource().equals(cbBlackMsgOthers)) {
 			colorMsgOthers = Color.BLACK;
+		} else if (e.getSource().equals(cbCyanMsgOthers)) {
+			colorMsgOthers = Color.CYAN;
+		} else if (e.getSource().equals(cbMagentaMsgOthers)) {
+			colorMsgOthers = Color.MAGENTA;
+		} else if (e.getSource().equals(cbOrangeMsgOthers)) {
+			colorMsgOthers = Color.ORANGE;
+		} else if (e.getSource().equals(cbWhiteBg)) {
+			output.setBackground(Color.WHITE);
+			dosegljivi.setBackground(Color.WHITE);
+		} else if (e.getSource().equals(cbGrayBg)) {
+			output.setBackground(Color.GRAY);
+			dosegljivi.setBackground(Color.GRAY);
+		} else if (e.getSource().equals(cbBlackBg)) {
+			output.setBackground(Color.BLACK);
+			dosegljivi.setBackground(Color.BLACK);
 		}
 	}
 
 	@Override
-	
 	public void keyTyped(KeyEvent e) {
 		if (e.getSource() == this.input) {
 			if (e.getKeyChar() == '\n') {
@@ -676,7 +888,6 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 					// Sporoèilo je namenjeno le 1 osebi
 					sporocilo = new PosljiSporociloDirect(false, input.getText(), komuPosiljamo);
 				}
-				System.out.println(sporocilo);
 				ObjectMapper mapper = new ObjectMapper();
 				mapper.setDateFormat(new ISO8601DateFormat());
 				try {
@@ -698,9 +909,13 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 					input.setText("");
 				} catch (Exception e1) {
 					// TODO Auto-generated catch block
-					System.out.println("Napaka pri keyTyped!");
+					System.out.println("Napaka pri keyTyped! Sporoèilo ni bilo poslano!");
 					e1.printStackTrace();
 				}
+			}
+		} else if (e.getSource() == this.imeEditor) {
+			if (e.getKeyChar() == '\n') {
+				userLogin();
 			}
 		}
 	}
@@ -728,14 +943,17 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		// Okno se je zaprlo
 		if (gumbOdjavi.isEnabled()) {
 			// Imamo prijavljenega uporabnika
+			
+			// Izklopimo oba robota
+			robot.cancel();
+			robotDosegljivi.cancel();
 			try {
 				// Uporabnika poizkusimo odjaviti
 				HttpCommands.odjava(imeEditor.getText());
-				// Izklopimo oba robota
-				robot.cancel();
-				robotDosegljivi.cancel();
-				System.exit(0);
 			} catch (Exception e1) {
+				// Tu je uporabniku bolj kot ne vseeno
+				// On je zaprl aplikacijo, vsi roboti itd. so se izklopili
+				// Edino kar se je zgodilo je, da je ostal 'vpisan' in se bo morda moral vpisati z drugim uporabniškim imenom
 				System.out.println("Neuspešna odjava!");
 			}
 		}

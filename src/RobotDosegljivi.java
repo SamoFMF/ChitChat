@@ -24,27 +24,24 @@ public class RobotDosegljivi extends TimerTask {
 	public void run() {
 		try {
 			String jsonUporabniki = HttpCommands.pridobiUporabnike();
-			System.out.println(jsonUporabniki);
 			ObjectMapper mapper = new ObjectMapper();
 			mapper.setDateFormat(new ISO8601DateFormat());
 			TypeReference<List<Uporabnik>> t = new TypeReference<List<Uporabnik>>() { };
 			List<Uporabnik> uporabniki = mapper.readValue(jsonUporabniki, t);
 			chat.addAllOnlineUsers(uporabniki);
-			chat.dosegljivi.setText("");
+			
+			// Dodajmo še možnosti za private msg
 			String[] online = new String[uporabniki.size()];
 			int st = 0;
 			for (Uporabnik i : uporabniki) {
-				String text = chat.dosegljivi.getText();
-				chat.dosegljivi.setText(text + i.getUsername() + '\n');
-				// Dodamo še v online
-				if (i.getUsername().equals(chat.imeEditor.getText())) continue;
+				if (i.getUsername().equals(chat.getImeEditor().getText())) continue;
 				online[st] = i.getUsername();
 				st++;
 			}
-			boolean b = new HashSet<String>(Arrays.asList(online)).equals(new HashSet<String>(Arrays.asList(chat.getOnline()))); // Preverimo, èe sta seznama enaka
+			boolean b = new HashSet<String>(Arrays.asList(online)).equals(new HashSet<String>(Arrays.asList(chat.getOnline()))); // Preverimo, èe je kak nov uporabnik prišel online / kater odšel offline
 			if (!b) {
-				// Èe sta razlièna, posodobimo
-				chat.testBox(online);
+				// Seznama uporabnikov nista enaka
+				chat.updateWhoMenu(online);
 				chat.setOnline(online);
 			}
 		} catch (Exception e) {
