@@ -1,3 +1,4 @@
+import java.awt.Adjustable;
 import java.awt.Color;
 import java.awt.Container;
 import java.awt.FlowLayout;
@@ -5,21 +6,29 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.AdjustmentEvent;
+import java.awt.event.AdjustmentListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
+import java.util.Date;
+import java.util.List;
 
 import javax.swing.ButtonGroup;
+import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JRadioButtonMenuItem;
+import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
 import javax.swing.JSlider;
 import javax.swing.JSplitPane;
@@ -48,7 +57,7 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 	protected JTextField imeEditor;
 	private JButton gumbPrijavi;
 	private JButton gumbOdjavi;
-	private JTextField komuPosiljamo;
+	private String komuPosiljamo;
 	private RobotZaSporocila robot;
 	protected JTextArea dosegljivi;
 	private RobotDosegljivi robotDosegljivi;
@@ -66,6 +75,12 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 	private JRadioButtonMenuItem cbRedMsgOthers, cbGreenMsgOthers, cbBlueMsgOthers, cbBlackMsgOthers; // Barve za sporoèila, ki jih pošljejo ostali
 	private JSlider fontSizeSlider;
 	private int fontSize;
+	private String[] testNames;
+	private JComboBox<String> whoMenu;
+	private String[] online;
+	private Container pane;
+	private GridBagConstraints grid;
+	protected JTextPane test;
 
 	public ChatFrame() {
 		super();
@@ -88,8 +103,8 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		
 		// Dodamo menu "File"
 		fileMenu = new JMenu("File");
-		JMenuItem miLogin = new JMenuItem("Login");
-		JMenuItem miLogout = new JMenuItem("Logout");
+		miLogin = new JMenuItem("Login");
+		miLogout = new JMenuItem("Logout");
 		JMenuItem miExit = new JMenuItem("Exit");
 		// Dodamo možnosti v fileMenu
 		fileMenu.add(miLogin);
@@ -300,6 +315,7 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		output = new JTextPane();
 		output.setEditable(false);
 		JScrollPane drsnikLevo = new JScrollPane(output);
+		scrollToBottom(drsnikLevo);
 		GridBagConstraints outputConstraint = new GridBagConstraints();
 		outputConstraint.gridx = 0;
 		outputConstraint.gridy = 0;
@@ -333,15 +349,30 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		input.addKeyListener(this);
 		
 		// Polje za vnos prejemnika sporoèila
-		komuPosiljamo = new JTextField(10);
-		komuPosiljamo.setEditable(false);
+		komuPosiljamo = new String();
+		online = new String[]{};
+		whoMenu = new JComboBox<String>(online);
+		whoMenu.setEditable(true);
+		whoMenu.setEnabled(false);
+		whoMenu.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				@SuppressWarnings("unchecked")
+				JComboBox<String> cb = (JComboBox<String>) e.getSource();
+				if (cb.getSelectedIndex() == -1) {
+					komuPosiljamo = new String("");
+				} else {
+					String who = cb.getSelectedItem().toString();
+					komuPosiljamo = new String(who);
+				}
+			}
+		});
 		GridBagConstraints komuConstraint = new GridBagConstraints();
 		komuConstraint.gridx = 0;
 		komuConstraint.gridy = 1;
 		komuConstraint.fill = GridBagConstraints.HORIZONTAL;
 		komuConstraint.weightx = 1;
 		komuConstraint.weighty = 0;
-		desno.add(komuPosiljamo, komuConstraint);
+		desno.add(whoMenu, komuConstraint);
 		
 		// Splitter, ki loèi levo in desno stran
 		splitter = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, levo, desno);
@@ -359,8 +390,99 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		
 		// Doloèimo, da se okno zapre in ne le skrije, èe kliknemo križec
 		setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+		
+		// Testiramo
+		test = new JTextPane();
+		addOnlineUser("Samo", true);
+		addOnlineUser("Samo", false);
+		addOnlineUser("Testni uporabnik");
+		
+		GridBagConstraints grid = new GridBagConstraints();
+		grid.gridx = 0;
+		grid.gridy = 2;
+		grid.fill = GridBagConstraints.BOTH;
+		grid.weightx = 1;
+		grid.weighty = 0;
+		pane.add(test, grid);
 	}
 	
+	public void addOnlineUser(String name, boolean isAway) {
+		StyleContext sc = StyleContext.getDefaultStyleContext();
+		AttributeSet aset = sc.addAttribute(SimpleAttributeSet.EMPTY, StyleConstants.Foreground, Color.BLACK);
+		
+		aset = sc.addAttribute(aset, StyleConstants.Alignment, StyleConstants.ALIGN_JUSTIFIED);
+		aset = sc.addAttribute(aset, StyleConstants.FontSize, fontSize);
+		
+		int len = test.getDocument().getLength();
+		try {
+			test.getDocument().insertString(len, name, aset);
+			len = test.getDocument().getLength();
+			if (isAway) {
+				aset = sc.addAttribute(aset, StyleConstants.Italic, true);
+				aset = sc.addAttribute(aset, StyleConstants.FontSize, fontSize-3);
+				test.getDocument().insertString(len, "   (Away)\n" , aset);
+			} else {
+				test.getDocument().insertString(len, "\n", aset);
+			}
+		} catch (BadLocationException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	public void addOnlineUser(String name) {
+		addOnlineUser(name, false);
+	}
+	
+	public void addAllOnlineUsers(List<Uporabnik> users) {
+		test.setText("");
+		for (Uporabnik i : users) {
+			addOnlineUser(i.getUsername(), checkIfAway(i));
+		}
+	}
+	
+	public boolean checkIfAway(Uporabnik user, int ms) {
+		// Preverimo, èe je user bil aktiven v zadnjih ms milisekundah
+		Date time = new Date();
+		if (time.getTime() - user.getLastActive().getTime() > ms) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+	
+	public boolean checkIfAway(Uporabnik user) {
+		// Po defaultu preverimo za 5 minut (= 300.000 ms)
+		return checkIfAway(user, 300000);
+	}
+	
+	private void scrollToBottom(JScrollPane scrollPane) {
+	    JScrollBar verticalBar = scrollPane.getVerticalScrollBar();
+	    AdjustmentListener downScroller = new AdjustmentListener() {
+	        @Override
+	        public void adjustmentValueChanged(AdjustmentEvent e) {
+	            Adjustable adjustable = e.getAdjustable();
+	            adjustable.setValue(adjustable.getMaximum());
+	            verticalBar.removeAdjustmentListener(this);
+	        }
+	    };
+	    verticalBar.addAdjustmentListener(downScroller);
+	}
+	
+	public JComboBox<String> getTestMenu() {
+		return whoMenu;
+	}
+
+	public void setTestMenu(JComboBox<String> testMenu) {
+		this.whoMenu = testMenu;
+	}
+	
+	public void testBox(String[] online) {
+		DefaultComboBoxModel<String> model = new DefaultComboBoxModel<String>(online);
+		model.setSelectedItem(null);
+		whoMenu.setModel(model);
+	}
+
 	/**
 	 * @param message - the message content
 	 */
@@ -443,9 +565,17 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		addMessage(sender, "", message, who);
 	}
 	
+	public String[] getOnline() {
+		return online;
+	}
+
+	public void setOnline(String[] online) {
+		this.online = online;
+	}
+
 	@Override
 	public void actionPerformed(ActionEvent e) {
-		if (e.getSource().equals(gumbPrijavi) || e.getActionCommand().equals("Login")) {
+		if (e.getSource().equals(gumbPrijavi) || e.getSource().equals(miLogin)) {
 			try {
 				// Poizkusimo se prijaviti
 				if (imeEditor.getText().isEmpty()) imeEditor.setText(System.getProperty("user.name"));
@@ -457,7 +587,7 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 				gumbOdjavi.setEnabled(true);
 				gumbPrijavi.setEnabled(false);
 				input.setEditable(true);
-				komuPosiljamo.setEditable(true);
+				whoMenu.setEnabled(true);
 				
 				// Uporabniku sporoèimo, da se je uspešno prijavil
 				adminMessage("Uspešno ste se prijavili!");
@@ -473,7 +603,7 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 				adminMessage("Neuspešna prijava!");
 				System.out.println("Neuspešna prijava!");
 			}
-		} else if (e.getSource().equals(gumbOdjavi) || e.getActionCommand().equals("Logout")) {
+		} else if (e.getSource().equals(gumbOdjavi) || e.getSource().equals(miLogout)) {
 			try {
 				// Uporabnika poizkusimo odjaviti
 				HttpCommands.odjava(imeEditor.getText());
@@ -483,7 +613,7 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 				gumbOdjavi.setEnabled(false);
 				gumbPrijavi.setEnabled(true);
 				input.setEditable(false);
-				komuPosiljamo.setEditable(false);
+				whoMenu.setEnabled(false);
 				
 				// Uporabniku sporoèimo, da se je uspešno odjavil
 				adminMessage("Uspešno ste se odjavili!");
@@ -539,12 +669,12 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		if (e.getSource() == this.input) {
 			if (e.getKeyChar() == '\n') {
 				PosljiSporocilo sporocilo;
-				if (komuPosiljamo.getText().isEmpty()) {
+				if (komuPosiljamo.isEmpty()) {
 					// Imamo global sporoèilo
 					sporocilo = new PosljiSporocilo(true, input.getText());
 				} else {
 					// Sporoèilo je namenjeno le 1 osebi
-					sporocilo = new PosljiSporociloDirect(false, input.getText(), komuPosiljamo.getText());
+					sporocilo = new PosljiSporociloDirect(false, input.getText(), komuPosiljamo);
 				}
 				System.out.println(sporocilo);
 				ObjectMapper mapper = new ObjectMapper();
@@ -558,11 +688,10 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 					HttpCommands.posljiSporocilo(imeEditor.getText(), jsonSporocilo);
 					
 					// Izpišemo ga na našem zaslonu
-//					addMessage(imeEditor.getText(), input.getText());
 					if (sporocilo.isGlobal()) {
 						addMessage(imeEditor.getText(), input.getText(), "Me");
 					} else {
-						addMessage(imeEditor.getText(), komuPosiljamo.getText(), input.getText(), "Me");
+						addMessage(imeEditor.getText(), komuPosiljamo, input.getText(), "Me");
 					}
 					
 					// Pobrišemo input polje

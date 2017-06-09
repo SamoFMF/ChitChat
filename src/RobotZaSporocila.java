@@ -28,7 +28,6 @@ public class RobotZaSporocila extends TimerTask {
 			List<Sporocilo> sporocila = mapper.readValue(jsonSporocila, t);
 			
 			for (Sporocilo i : sporocila) {
-//				chat.addMessage(i.getPosiljatelj(), i.getMsg());
 				if (i.isGlobal()) {
 					chat.addMessage(i.getPosiljatelj(), i.getMsg(), "Others");
 				} else {
