@@ -13,10 +13,10 @@ import java.awt.event.KeyListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
 
 import javax.swing.ButtonGroup;
@@ -80,7 +80,7 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 	private int fontSize;
 	private JComboBox<String> whoMenu;
 	private String[] online;
-	private Map<String, Long> lastActive;
+	protected Map<String, Long> lastActive;
 
 	public ChatFrame() {
 		super();
@@ -466,6 +466,36 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 	}
 	
+	/**
+	 * Updates {@code lastActive} to contain currently online users
+	 */
+	public void syncUsers() {
+		List<Uporabnik> users = getAllOnlineUsersList();
+		String[] usernames = new String[users.size()];
+		int st = 0;
+		// Preverimo, èe so kaki novi uporabniki online
+		for (Uporabnik i : users) {
+			usernames[st] = i.getUsername();
+			st++;
+			if (lastActive.containsKey(i.getUsername())) continue;
+			lastActive.put(i.getUsername(), i.getLastActive().getTime());
+		}
+		
+		// Preverimo, èe kakšni uporabniki niso veè online
+		List<String> toRemove = new ArrayList<String>();
+		for (String i : lastActive.keySet()) {
+			if (Arrays.asList(usernames).contains(i)) continue;
+			toRemove.add(i);
+		}
+		for (String i : toRemove) {
+			lastActive.remove(i);
+		}
+	}
+	
+	public void updateLastActive(String username, Date date) {
+		lastActive.put(username, date.getTime());
+	}
+	
 	public void addOnlineUser(String name, boolean isAway) {
 		Color c;
 		if (dosegljivi.getBackground().equals(Color.BLACK)) {
@@ -511,12 +541,12 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 	
 	public boolean checkIfAway(Uporabnik user, int ms) {
 		// Preverimo, èe je user bil aktiven v zadnjih ms milisekundah
-		Date time = new Date();
-		if (time.getTime() - user.getLastActive().getTime() > ms) {
-			return true;
-		} else {
-			return false;
+		if (lastActive.containsKey(user.getUsername())) {
+			if (new Date().getTime() - lastActive.get(user.getUsername()) > ms) {
+				return true;
+			}
 		}
+		return false;
 	}
 	
 	public boolean checkIfAway(Uporabnik user) {
@@ -700,6 +730,7 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 				} else {
 					addMessage(i.getPosiljatelj(), i.getPrejemnik(), i.getMsg(), "Others");
 				}
+				updateLastActive(i.getPosiljatelj(), i.getSentAt());
 			}
 		} catch (Exception e) {
 			// Preverimo, èe je uporabnik še online
@@ -904,6 +935,8 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 					} else {
 						addMessage(imeEditor.getText(), komuPosiljamo, input.getText(), "Me");
 					}
+					
+					updateLastActive(imeEditor.getText(), new Date());
 					
 					// Pobrišemo input polje
 					input.setText("");

@@ -38,6 +38,7 @@ public class RobotDosegljivi extends TimerTask {
 				online[st] = i.getUsername();
 				st++;
 			}
+			chat.syncUsers();
 			boolean b = new HashSet<String>(Arrays.asList(online)).equals(new HashSet<String>(Arrays.asList(chat.getOnline()))); // Preverimo, èe je kak nov uporabnik prišel online / kater odšel offline
 			if (!b) {
 				// Seznama uporabnikov nista enaka
