@@ -486,7 +486,6 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 					String who = cb.getSelectedItem().toString();
 					komuPosiljamo = new String(who);
 				}
-				System.out.println("komuPosiljamo = " + komuPosiljamo);
 			}
 		});
 		GridBagConstraints komuConstraint = new GridBagConstraints();
@@ -619,7 +618,16 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 	
 	public void updateWhoMenu(String[] online) {
 		DefaultComboBoxModel<String> model = new DefaultComboBoxModel<String>(online);
-		model.setSelectedItem(null);
+		String name = komuPosiljamo.isEmpty() ? null : komuPosiljamo;
+		if (!komuPosiljamo.isEmpty()) {
+			if (Arrays.asList(online).contains(name)) {
+				model.setSelectedItem(komuPosiljamo);
+			} else {
+				model.setSelectedItem(null);
+			}
+		} else {
+			model.setSelectedItem(null);
+		}
 		whoMenu.setModel(model);
 	}
 
