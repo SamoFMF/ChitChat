@@ -69,7 +69,7 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 	private JTextPane output;
 	private JMenuBar menuBar;
 	private JMenu fileMenu, optionsMenu, robotMenu;
-	private JMenuItem miLogin, miLogout, miRobotLogout;
+	private JMenuItem miLogin, miLogout, miStopRobot;
 	private ButtonGroup groupColorsMyName, groupColorsOthers, groupColorsMe, groupColorsMsgOthers, groupColorsBg;
 	private JRadioButtonMenuItem cbRedMyName, cbGreenMyName, cbBlueMyName, cbBlackMyName, cbCyanMyName, cbMagentaMyName, cbOrangeMyName; // Barve za imena pri sporoèilih, ki jih pošlje uporabnik -- Imena imajo cb na zaèetku, ker so prvotni bili CheckBoxi
 	private JRadioButtonMenuItem cbRedOthers, cbGreenOthers, cbBlueOthers, cbBlackOthers, cbCyanOthers, cbMagentaOthers, cbOrangeOthers; // Barve za imena pri sporoèilih, ki jih pošljejo ostali
@@ -81,9 +81,7 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 	private JComboBox<String> whoMenu;
 	private String[] online;
 	protected Map<String, Long> lastActive;
-	private OdmevRobot robotEcho;
 	private JMenuItem miStartRobot;
-	private Map<String, Long[]> robotTimers; // Z njimi bomo poskrbeli, da ne bosta 2 robota za isto osebo, ki bi imela enak timer, ker zaèenja prihajati do napak
 	private JSlider robotDelaySlider;
 	private long robotDelay;
 	private List<OdmevRobot> echoRobots;
@@ -106,7 +104,6 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		
 		// Nastavimo zaèetni set lastActive
 		lastActive = new TreeMap<String, Long>();
-		robotTimers = new TreeMap<String, Long[]>();
 		
 		// Dodajmo zgornji menu
 		// Najprej dodamo menu bar
@@ -114,10 +111,11 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		setJMenuBar(menuBar);
 		
 		// Dodamo menu "File"
-		fileMenu = new JMenu("File");
-		miLogin = new JMenuItem("Login");
-		miLogout = new JMenuItem("Logout");
-		JMenuItem miExit = new JMenuItem("Exit");
+		fileMenu = new JMenu("Datoteka");
+		miLogin = new JMenuItem("Prijava");
+		miLogout = new JMenuItem("Odjava");
+		miLogout.setEnabled(false);
+		JMenuItem miExit = new JMenuItem("Izhod");
 		// Dodamo možnosti v fileMenu
 		fileMenu.add(miLogin);
 		fileMenu.add(miLogout);
@@ -151,20 +149,20 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		menuBar.add(fileMenu);
 		
 		// Ustvarimo menu "Options"
-		optionsMenu = new JMenu("Options");
+		optionsMenu = new JMenu("Nastavitve");
 		// Ustvarimo podmenu "Color"
-		JMenu colorSubMenu = new JMenu("Font color");
+		JMenu colorSubMenu = new JMenu("Barva pisave");
 		// Ustvarimo subsubmenu "Names"
-		JMenu namesSubSubMenu = new JMenu("Names");
+		JMenu namesSubSubMenu = new JMenu("Imena");
 		// Ustvarimo subsubsubmenu "My name"
-		JMenu myName = new JMenu("My name");
-		cbRedMyName = new JRadioButtonMenuItem("Red");
-		cbBlueMyName = new JRadioButtonMenuItem("Blue", true);
-		cbGreenMyName = new JRadioButtonMenuItem("Green");
-		cbBlackMyName = new JRadioButtonMenuItem("Black");
-		cbCyanMyName = new JRadioButtonMenuItem("Cyan");
-		cbMagentaMyName = new JRadioButtonMenuItem("Magenta");
-		cbOrangeMyName = new JRadioButtonMenuItem("Orange");
+		JMenu myName = new JMenu("Moje ime");
+		cbRedMyName = new JRadioButtonMenuItem("Rdeèa");
+		cbBlueMyName = new JRadioButtonMenuItem("Modra", true);
+		cbGreenMyName = new JRadioButtonMenuItem("Zelena");
+		cbBlackMyName = new JRadioButtonMenuItem("Èrna");
+		cbCyanMyName = new JRadioButtonMenuItem("Sinje modra");
+		cbMagentaMyName = new JRadioButtonMenuItem("Škrlatna");
+		cbOrangeMyName = new JRadioButtonMenuItem("Oranžna");
 		// Dodamo možnosti v submenu "Color"
 		myName.add(cbBlueMyName);
 		myName.add(cbRedMyName);
@@ -193,14 +191,14 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		// Dodamo "My name" v "Names"
 		namesSubSubMenu.add(myName);
 		// Ustvarimo subsubsubmenu "Others"
-		JMenu otherNames = new JMenu("Others");
-		cbRedOthers = new JRadioButtonMenuItem("Red");
-		cbBlueOthers = new JRadioButtonMenuItem("Blue");
-		cbGreenOthers = new JRadioButtonMenuItem("Green");
-		cbBlackOthers = new JRadioButtonMenuItem("Black");
-		cbCyanOthers = new JRadioButtonMenuItem("Cyan", true);
-		cbMagentaOthers = new JRadioButtonMenuItem("Magenta");
-		cbOrangeOthers = new JRadioButtonMenuItem("Orange");
+		JMenu otherNames = new JMenu("Ostala");
+		cbRedOthers = new JRadioButtonMenuItem("Rdeèa");
+		cbBlueOthers = new JRadioButtonMenuItem("Modra");
+		cbGreenOthers = new JRadioButtonMenuItem("Zelena");
+		cbBlackOthers = new JRadioButtonMenuItem("Èrna");
+		cbCyanOthers = new JRadioButtonMenuItem("Sinje modra", true);
+		cbMagentaOthers = new JRadioButtonMenuItem("Škrlatna");
+		cbOrangeOthers = new JRadioButtonMenuItem("Oranžna");
 		// Dodamo možnosti v submenu "Color"
 		otherNames.add(cbBlueOthers);
 		otherNames.add(cbRedOthers);
@@ -232,16 +230,16 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		colorSubMenu.add(namesSubSubMenu);
 		
 		// Ustvarimo subsubmenu "Messages"
-		JMenu messagesSubSubMenu = new JMenu("Messages");
+		JMenu messagesSubSubMenu = new JMenu("Sporoèila");
 		// Ustvarimo subsubsubmenu "My messages"
-		JMenu myMessages = new JMenu("My messages");
-		cbRedMe = new JRadioButtonMenuItem("Red", true);
-		cbBlueMe = new JRadioButtonMenuItem("Blue");
-		cbGreenMe = new JRadioButtonMenuItem("Green");
-		cbBlackMe = new JRadioButtonMenuItem("Black");
-		cbCyanMe = new JRadioButtonMenuItem("Cyan");
-		cbMagentaMe = new JRadioButtonMenuItem("Magenta");
-		cbOrangeMe = new JRadioButtonMenuItem("Orange");
+		JMenu myMessages = new JMenu("Moja sporoèila");
+		cbRedMe = new JRadioButtonMenuItem("Rdeèa", true);
+		cbBlueMe = new JRadioButtonMenuItem("Modra");
+		cbGreenMe = new JRadioButtonMenuItem("Zelena");
+		cbBlackMe = new JRadioButtonMenuItem("Èrna");
+		cbCyanMe = new JRadioButtonMenuItem("Sinje modra");
+		cbMagentaMe = new JRadioButtonMenuItem("Škrlatna");
+		cbOrangeMe = new JRadioButtonMenuItem("Oranžna");
 		// Dodamo možnosti v submenu "Color"
 		myMessages.add(cbBlueMe);
 		myMessages.add(cbRedMe);
@@ -270,14 +268,14 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		// Dodamo "My messages" v "Messages"
 		messagesSubSubMenu.add(myMessages);
 		// Ustvarimo subsubsubmenu "Other"
-		JMenu otherMessages = new JMenu("Other");
-		cbRedMsgOthers = new JRadioButtonMenuItem("Red");
-		cbBlueMsgOthers = new JRadioButtonMenuItem("Blue");
-		cbGreenMsgOthers = new JRadioButtonMenuItem("Green");
-		cbBlackMsgOthers = new JRadioButtonMenuItem("Black");
-		cbCyanMsgOthers = new JRadioButtonMenuItem("Cyan");
-		cbMagentaMsgOthers = new JRadioButtonMenuItem("Magenta");
-		cbOrangeMsgOthers = new JRadioButtonMenuItem("Orange", true);
+		JMenu otherMessages = new JMenu("Ostala");
+		cbRedMsgOthers = new JRadioButtonMenuItem("Rdeèa");
+		cbBlueMsgOthers = new JRadioButtonMenuItem("Modra");
+		cbGreenMsgOthers = new JRadioButtonMenuItem("Zelena");
+		cbBlackMsgOthers = new JRadioButtonMenuItem("Èrna");
+		cbCyanMsgOthers = new JRadioButtonMenuItem("Sinje modra");
+		cbMagentaMsgOthers = new JRadioButtonMenuItem("Škrlatna");
+		cbOrangeMsgOthers = new JRadioButtonMenuItem("Oranžna", true);
 		// Dodamo možnosti v submenu "Color"
 		otherMessages.add(cbBlueMsgOthers);
 		otherMessages.add(cbRedMsgOthers);
@@ -310,7 +308,7 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		// Dodamo podmenu "Colors" v menu "Options"
 		optionsMenu.add(colorSubMenu);
 		// Ustvarimo menu "Font Size"
-		JMenu fontSizeSubMenu = new JMenu("Font size");
+		JMenu fontSizeSubMenu = new JMenu("Velikost pisave");
 		fontSizeSlider = new JSlider(12, 20, 12);
 		fontSizeSlider.setMajorTickSpacing(1);
 		fontSizeSlider.setPaintTicks(true);
@@ -330,10 +328,10 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		optionsMenu.add(fontSizeSubMenu);
 		
 		// Ustvarimo podmenu "Background color"
-		JMenu bgColorSubMenu = new JMenu("Background color");
-		cbWhiteBg = new JRadioButtonMenuItem("White", true);
-		cbGrayBg = new JRadioButtonMenuItem("Gray");
-		cbBlackBg = new JRadioButtonMenuItem("Black");
+		JMenu bgColorSubMenu = new JMenu("Barva ozadja");
+		cbWhiteBg = new JRadioButtonMenuItem("Bela", true);
+		cbGrayBg = new JRadioButtonMenuItem("Siva");
+		cbBlackBg = new JRadioButtonMenuItem("Èrna");
 		// Dodamo možnosti v submetu bg color
 		bgColorSubMenu.add(cbWhiteBg);
 		bgColorSubMenu.add(cbGrayBg);
@@ -354,14 +352,14 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		
 		// Dodamo menu Robot
 		robotMenu = new JMenu("Robot");
-		miStartRobot = new JMenuItem("Start");
+		miStartRobot = new JMenuItem("Zaženi");
 		// Dodamo listenerja
 		miStartRobot.addActionListener(this);
 		// Dodamo v menu Robot
 		robotMenu.add(miStartRobot);
 		
 		// Ustvarimo menu "Font Size"
-		JMenu robotDelaySubMenu = new JMenu("Set delay");
+		JMenu robotDelaySubMenu = new JMenu("Nastavi zamik");
 		robotDelaySlider = new JSlider(1000, 10000, 2500);
 		robotDelaySlider.setMajorTickSpacing(3000);
 		robotDelaySlider.setMinorTickSpacing(500);
@@ -381,15 +379,16 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		// Dodamo podmenu v menu "Options"
 		robotMenu.add(robotDelaySubMenu);
 		// Dodajmo razlago
-		JMenu info = new JMenu("Information");
+		JMenu info = new JMenu("Navodila");
 		JTextArea infoText = new JTextArea();
-		infoText.setText("Robot will echo whoever\nyou have selected right now.\nIf you have noone selected,\nit will echo your messages.");
+		infoText.setText("Robot bo ponavljal sporoèila\nosebe, ki jo imate izbrano.\nÈe nimate nikogar izbranega,\nbo robot ponavljal vaša sporoèila.\nZamiki robotov, ki oponašajo\nisto osebo, se morajo razlikovati\nza vsaj pol sekunde.");
+//		infoText.setText("Robot will echo whoever\nyou have selected right now.\nIf you have noone selected,\nit will echo your messages.");
 		info.add(infoText);
 		robotMenu.add(info);
 		// Dodamo gumb za odjavo
-		miRobotLogout = new JMenuItem("Stop");
-		miRobotLogout.addActionListener(this);
-		robotMenu.add(miRobotLogout);
+		miStopRobot = new JMenuItem("Ustavi");
+		miStopRobot.addActionListener(this);
+		robotMenu.add(miStopRobot);
 		// Dodamo menu Robot v menuBar
 		menuBar.add(robotMenu);
 		
@@ -507,6 +506,9 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		splitterConstraint.weightx = 1;
 		splitterConstraint.weighty = 1;
 		pane.add(splitter, splitterConstraint);
+		
+		// Nastavimo nastavitve gumbov
+		urediGumbe(false);
 		
 		// Sledimo dogodkom povezanim z oknom
 		addWindowListener(this);
@@ -861,7 +863,31 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 	
 	public void robotLogin(String name) throws Exception {
 		HttpCommands.prijava(name);
-		adminMessage("Robot " + name + "uspešno prijavljen!");
+		adminMessage("Robot " + name + " je bil uspešno prijavljen!");
+	}
+	
+	public void urediGumbe(boolean isOnline) {
+		if (isOnline) {
+			imeEditor.setEditable(false);
+			gumbPrijavi.setEnabled(false);
+			gumbOdjavi.setEnabled(true);
+			input.setEditable(true);
+			whoMenu.setEnabled(true);
+			miLogin.setEnabled(false);
+			miLogout.setEnabled(true);
+			miStartRobot.setEnabled(true);
+			miStopRobot.setEnabled(true);
+		} else {
+			imeEditor.setEditable(true);
+			gumbPrijavi.setEnabled(true);
+			gumbOdjavi.setEnabled(false);
+			input.setEditable(false);
+			whoMenu.setEnabled(false);
+			miLogin.setEnabled(true);
+			miLogout.setEnabled(false);
+			miStartRobot.setEnabled(false);
+			miStopRobot.setEnabled(false);
+		}
 	}
 	
 	public void userLogin() {
@@ -872,11 +898,7 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 			HttpCommands.prijava(imeEditor.getText());
 			
 			// Primerno vklopimo / izklopimo razna polja & gumbe
-			imeEditor.setEditable(false);
-			gumbPrijavi.setEnabled(false);
-			gumbOdjavi.setEnabled(true);
-			input.setEditable(true);
-			whoMenu.setEnabled(true);
+			urediGumbe(true);
 			
 			// Uporabniku sporoèimo, da se je uspešno prijavil
 			adminMessage("Uspešno ste se prijavili!");
@@ -964,11 +986,7 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 			HttpCommands.odjava(imeEditor.getText());
 			
 			// Primerno vklopimo / izklopimo razna polja & gumbe
-			imeEditor.setEditable(true);
-			gumbPrijavi.setEnabled(true);
-			gumbOdjavi.setEnabled(false);
-			input.setEditable(false);
-			whoMenu.setEnabled(false);
+			urediGumbe(false);
 			
 			// Uporabniku sporoèimo, da se je uspešno odjavil
 			adminMessage("Uspešno ste se odjavili!");
@@ -996,11 +1014,7 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 				adminMessage("Bili ste odjavljeni!");
 				System.out.println("Uporabnik se je odjavil, vendar ne po lastni želji!");
 				// Primerno vklopimo / izklopimo razna polja & gumbe
-				imeEditor.setEditable(true);
-				gumbPrijavi.setEnabled(true);
-				gumbOdjavi.setEnabled(false);
-				input.setEditable(false);
-				whoMenu.setEnabled(false);
+				urediGumbe(false);
 			}
 		}
 	}
@@ -1083,7 +1097,7 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 				r.activate();
 				echoRobots.add(r);
 			}
-		} else if (e.getSource().equals(miRobotLogout)) {
+		} else if (e.getSource().equals(miStopRobot)) {
 			disableOdmevRobot(komuPosiljamo.isEmpty() ? imeEditor.getText() : komuPosiljamo);
 		}
 	}

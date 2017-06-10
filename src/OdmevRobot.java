@@ -19,7 +19,8 @@ public class OdmevRobot implements KeyListener {
 		isActive = false;
 		chat.input.addKeyListener(this);
 		String vmesni = stringCopy(vzdevek);
-		vmesni += "'s echo";
+		vmesni += "'s echo ";
+		vmesni += Integer.toString((int) cas);
 		int st = 1;
 		while (Arrays.asList(chat.getOnline()).contains(vmesni)) {
 			vmesni += ' ';
