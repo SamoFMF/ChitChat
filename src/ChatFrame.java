@@ -34,6 +34,7 @@ import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
 import javax.swing.JSlider;
 import javax.swing.JSplitPane;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.JTextPane;
 import javax.swing.event.ChangeEvent;
@@ -55,7 +56,7 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 	 * @param input - Input window for your message
 	 */
 	private static final long serialVersionUID = 1L;
-	private JTextField input;
+	protected JTextField input;
 	private JTextField imeEditor;
 	private JButton gumbPrijavi;
 	private JButton gumbOdjavi;
@@ -67,9 +68,8 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 	private Color colorMyName, colorOthers, colorMe, colorMsgOthers;
 	private JTextPane output;
 	private JMenuBar menuBar;
-	private JMenu fileMenu;
+	private JMenu fileMenu, optionsMenu, robotMenu;
 	private JMenuItem miLogin, miLogout;
-	private JMenu optionsMenu;
 	private ButtonGroup groupColorsMyName, groupColorsOthers, groupColorsMe, groupColorsMsgOthers, groupColorsBg;
 	private JRadioButtonMenuItem cbRedMyName, cbGreenMyName, cbBlueMyName, cbBlackMyName, cbCyanMyName, cbMagentaMyName, cbOrangeMyName; // Barve za imena pri sporoèilih, ki jih pošlje uporabnik -- Imena imajo cb na zaèetku, ker so prvotni bili CheckBoxi
 	private JRadioButtonMenuItem cbRedOthers, cbGreenOthers, cbBlueOthers, cbBlackOthers, cbCyanOthers, cbMagentaOthers, cbOrangeOthers; // Barve za imena pri sporoèilih, ki jih pošljejo ostali
@@ -81,6 +81,12 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 	private JComboBox<String> whoMenu;
 	private String[] online;
 	protected Map<String, Long> lastActive;
+	private OdmevRobot robotEcho;
+	private JMenuItem miStartRobot;
+	private Map<String, Long[]> robotTimers; // Z njimi bomo poskrbeli, da ne bosta 2 robota za isto osebo, ki bi imela enak timer, ker zaèenja prihajati do napak
+	private JSlider robotDelaySlider;
+	private long robotDelay;
+	private List<OdmevRobot> echoRobots;
 
 	public ChatFrame() {
 		super();
@@ -89,15 +95,18 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		Container pane = this.getContentPane();
 		pane.setLayout(new GridBagLayout());
 		
-		// Nastavimo default barve in velikost pisave
+		// Nastavimo default barve, velikost pisave in druge privzete vrednosti spremenljivk
 		colorMyName = Color.BLUE;
 		colorMe = Color.RED;
 		colorOthers = Color.CYAN;
 		colorMsgOthers = Color.ORANGE;
 		fontSize = 12;
+		robotDelay = (long) 2500;
+		echoRobots = new ArrayList<OdmevRobot>();
 		
 		// Nastavimo zaèetni set lastActive
 		lastActive = new TreeMap<String, Long>();
+		robotTimers = new TreeMap<String, Long[]>();
 		
 		// Dodajmo zgornji menu
 		// Najprej dodamo menu bar
@@ -343,6 +352,42 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		// Dodamo menu "Options" v menuBar
 		menuBar.add(optionsMenu);
 		
+		// Dodamo menu Robot
+		robotMenu = new JMenu("Robot");
+		miStartRobot = new JMenuItem("Start");
+		// Dodamo listenerja
+		miStartRobot.addActionListener(this);
+		// Dodamo v menu Robot
+		robotMenu.add(miStartRobot);
+		
+		// Ustvarimo menu "Font Size"
+		JMenu robotDelaySubMenu = new JMenu("Set delay");
+		robotDelaySlider = new JSlider(1000, 10000, 2500);
+		robotDelaySlider.setMajorTickSpacing(3000);
+		robotDelaySlider.setMinorTickSpacing(500);
+		robotDelaySlider.setPaintTicks(true);
+		robotDelaySlider.setPaintLabels(true);
+		// Dodamo listener
+		robotDelaySlider.addChangeListener(new ChangeListener() {
+			public void stateChanged(ChangeEvent e) {
+				JSlider source = (JSlider) e.getSource();
+				if (!source.getValueIsAdjusting()) {
+					robotDelay = (long) source.getValue();
+				}
+			}
+		});
+		// Dodamo slider v podmenu
+		robotDelaySubMenu.add(robotDelaySlider);
+		// Dodamo podmenu v menu "Options"
+		robotMenu.add(robotDelaySubMenu);
+		// Dodajmo razlago
+		JMenu info = new JMenu("Information");
+		JTextArea infoText = new JTextArea();
+		infoText.setText("Robot will echo whoever\nyou have selected right now.\nIf you have noone selected,\nit will echo your messages.");
+		info.add(infoText);
+		robotMenu.add(info);
+		// Dodamo menu Robot v menuBar
+		menuBar.add(robotMenu);
 		
 		// Ustvarimo panel za zgornjo vrstico (vzdevek, prijava, odjava)
 		JPanel zgoraj = new JPanel();
@@ -437,6 +482,7 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 					String who = cb.getSelectedItem().toString();
 					komuPosiljamo = new String(who);
 				}
+				System.out.println("komuPosiljamo = " + komuPosiljamo);
 			}
 		});
 		GridBagConstraints komuConstraint = new GridBagConstraints();
@@ -684,6 +730,14 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		this.imeEditor = imeEditor;
 	}
 	
+	public JTextField getInput() {
+		return input;
+	}
+
+	public void setInput(JTextField input) {
+		this.input = input;
+	}
+
 	public List<Uporabnik> getAllOnlineUsersList() {
 		// TODO - lahko uporabiš v `RobotDosegljivi` - zaenkrat le za preverjanje, èe user online
 		List<Uporabnik> uporabniki;
@@ -731,6 +785,11 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 					addMessage(i.getPosiljatelj(), i.getPrejemnik(), i.getMsg(), "Others");
 				}
 				updateLastActive(i.getPosiljatelj(), i.getSentAt());
+				for (OdmevRobot or : echoRobots) {
+					if (i.getPosiljatelj().equals(or.vzdevek)) {
+						or.newMessage(i.getMsg());
+					}
+				}
 			}
 		} catch (Exception e) {
 			// Preverimo, èe je uporabnik še online
@@ -738,20 +797,59 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 				// Uporabnik ni veè vpisan
 				// Poizkusimo ga izpisati in ponovno vpisati
 				userLogout();
-				userLogin();
-				if (isOnline(imeEditor.getText())) {
-					// Uspešno smo ga vpisali!
-					adminMessage("Prišlo je do neprièakovanih težav. Morda ste izgubili kakšno sporoèilo.");
-					System.out.println("Uporabnik je bil uspešno vpisan nazaj!");
-				} else {
-					// Prijava ni uspela
-					userLogout();
-				}
+				adminMessage("Ponovno se prijavite z istim uporabniškim imenom, da zmanjšate možnost izgube sporoèil.");
 			} else {
 				adminMessage("Prišlo je do neprièakovanih težav. Morda ste izgubili kakšno sporoèilo.");
 				System.out.println("Zaradi neznane težave sporoèil nismo uspeli pridobiti!");
 			}
 		}
+	}
+	
+	public void sendMessage(String sender, String message, String recipient) {
+		PosljiSporocilo sporocilo;
+		if (recipient.isEmpty()) {
+			// Imamo global sporoèilo (namenjeno vsem)
+			sporocilo = new PosljiSporocilo(true, message);
+		} else {
+			// Sporoèilo je namenjeno le 1 osebi
+			sporocilo = new PosljiSporociloDirect(false, message, recipient);
+		}
+		ObjectMapper mapper = new ObjectMapper();
+		mapper.setDateFormat(new ISO8601DateFormat());
+		try {
+			// Sporoèilo zapišemov JSON formatu
+			String jsonSporocilo = mapper.writeValueAsString(sporocilo);
+			System.out.println(jsonSporocilo);
+
+			// Sporoèilo poizkusimo poslati strežniku
+			HttpCommands.posljiSporocilo(sender, jsonSporocilo);
+			
+			// Izpišemo ga na našem zaslonu, èe smo ga poslali mi (Funkcijo uporablja tudi robot)
+			if (sender.equals(imeEditor.getText())) {
+				if (sporocilo.isGlobal()) {
+					addMessage(imeEditor.getText(), input.getText(), "Me");
+				} else {
+					addMessage(imeEditor.getText(), recipient, input.getText(), "Me");
+				}
+				// Pobrišemo input polje
+				input.setText("");
+				// Posodobimo lastActive
+				updateLastActive(imeEditor.getText(), new Date());
+			}
+		} catch (Exception e) {
+			// TODO - ??
+			System.out.println("Napaka pri \"sendMessage\"! Sporoèilo ni bilo poslano!");
+			e.printStackTrace();
+		}
+	}
+	
+	public void sendMessage(String sender, String message) {
+		sendMessage(sender, message, "");
+	}
+	
+	public void robotLogin(String name) throws Exception {
+		HttpCommands.prijava(name);
+		adminMessage("Robot " + name + "uspešno prijavljen!");
 	}
 	
 	public void userLogin() {
@@ -784,10 +882,53 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		}
 	}
 	
+	/**
+	 * Method used for signing out a robot named {@code name}
+	 * @param name - robots name {@code vzdevekRobot}
+	 */
+	public void robotLogout(String name) {
+		try {
+			// Robota poizkusimo odjaviti
+			HttpCommands.odjava(name);
+			
+			// Uporabniku sporoèimo, da je robota uspešno odjavil
+			adminMessage("Robot " + name + "je bil uspešno odjavljen!");
+		} catch (Exception e) {
+			if (isOnline(name)) {
+				// Robota nismo uspeli izpisati
+				// Pustimo ga na miru, saj ga `userLogout` nastavi na null in ne bo veè niè delal
+				adminMessage("Robot " + name + " ni bil uspešno izpisan, je bil pa unièen in bo sèasoma izginil.");
+			} else {
+				// Nekako se je izpisal, kar nam odgovarja
+				adminMessage("Robot " + name + " je odjavljen!");
+			}
+		}
+	}
+	
+	public void disableOdmevRobot() {
+		int n = echoRobots.size();
+		List<OdmevRobot> odstrani = new ArrayList<OdmevRobot>();
+		for (int i = 0; i < n; i++) {
+			System.out.println(echoRobots.get(i).vzdevekRobot);
+			echoRobots.get(i).cancel();
+			odstrani.add(echoRobots.get(i));
+		}
+		for (OdmevRobot or : odstrani) {
+			echoRobots.remove(or);
+		}
+	}
+	
+	/**
+	 * Method used for signing out the user
+	 */
 	public void userLogout() {
-		// Odjavimo oba robota
+		// Odjavimo oba robota za sporoèila
 		robot.cancel();
 		robotDosegljivi.cancel();
+
+		// Odjavimo vse OdmevRobot-e
+		disableOdmevRobot();
+		
 		try {
 			// Uporabnika poizkusimo odjaviti
 			HttpCommands.odjava(imeEditor.getText());
@@ -812,8 +953,9 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 				// Uporabnik je še vpisan
 				// To mu sporoèimo
 				adminMessage("Neuspešna odjava!");
+				adminMessage("Izgubili ste odmeve.");
 				System.out.println("Uporabnik je ostal vpisan, kljub zahtevi po odjavi!");
-				// Ponovno aktiviramo oba robota
+				// Ponovno aktiviramo oba robota, EchoRobots so žal izgubljeni
 				robot = new RobotZaSporocila(this);
 				robot.activate();
 				robotDosegljivi = new RobotDosegljivi(this);
@@ -821,7 +963,7 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 			} else {
 				// Uporabnik ni veè vpisan
 				// To mu sporoèimo
-				adminMessage("Uspešno ste se odjavili!");
+				adminMessage("Bili ste odjavljeni!");
 				System.out.println("Uporabnik se je odjavil, vendar ne po lastni želji!");
 				// Primerno vklopimo / izklopimo razna polja & gumbe
 				imeEditor.setEditable(true);
@@ -904,47 +1046,33 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		} else if (e.getSource().equals(cbBlackBg)) {
 			output.setBackground(Color.BLACK);
 			dosegljivi.setBackground(Color.BLACK);
+		} else if (e.getSource().equals(miStartRobot)) {
+			String name = komuPosiljamo.isEmpty() ? imeEditor.getText() : komuPosiljamo;
+			if (isValidRobot(name, robotDelay)) {
+				OdmevRobot r = new OdmevRobot(this, name, robotDelay);
+				r.activate();
+				echoRobots.add(r);
+			}
 		}
+	}
+	
+	public boolean isValidRobot(String name, long delay) {
+		boolean isValid = true;
+		for (OdmevRobot or : echoRobots) {
+			if (or.vzdevek.equals(name) && or.isActive && absValue(delay-or.cas) < 500) isValid = false;
+		}
+		return isValid;
+	}
+	
+	public long absValue(long x) {
+		return x>=0 ? x : -x;
 	}
 
 	@Override
 	public void keyTyped(KeyEvent e) {
 		if (e.getSource() == this.input) {
 			if (e.getKeyChar() == '\n') {
-				PosljiSporocilo sporocilo;
-				if (komuPosiljamo.isEmpty()) {
-					// Imamo global sporoèilo
-					sporocilo = new PosljiSporocilo(true, input.getText());
-				} else {
-					// Sporoèilo je namenjeno le 1 osebi
-					sporocilo = new PosljiSporociloDirect(false, input.getText(), komuPosiljamo);
-				}
-				ObjectMapper mapper = new ObjectMapper();
-				mapper.setDateFormat(new ISO8601DateFormat());
-				try {
-					// Sporoèilo zapišemo v JSON formatu
-					String jsonSporocilo = mapper.writeValueAsString(sporocilo);
-					System.out.println(jsonSporocilo);
-					
-					// Sporoèilo poizkusimo poslati strežniku
-					HttpCommands.posljiSporocilo(imeEditor.getText(), jsonSporocilo);
-					
-					// Izpišemo ga na našem zaslonu
-					if (sporocilo.isGlobal()) {
-						addMessage(imeEditor.getText(), input.getText(), "Me");
-					} else {
-						addMessage(imeEditor.getText(), komuPosiljamo, input.getText(), "Me");
-					}
-					
-					updateLastActive(imeEditor.getText(), new Date());
-					
-					// Pobrišemo input polje
-					input.setText("");
-				} catch (Exception e1) {
-					// TODO Auto-generated catch block
-					System.out.println("Napaka pri keyTyped! Sporoèilo ni bilo poslano!");
-					e1.printStackTrace();
-				}
+				sendMessage(imeEditor.getText(), input.getText(), komuPosiljamo);
 			}
 		} else if (e.getSource() == this.imeEditor) {
 			if (e.getKeyChar() == '\n') {
@@ -980,6 +1108,10 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 			// Izklopimo oba robota
 			robot.cancel();
 			robotDosegljivi.cancel();
+			
+			// Odjavimo vse OdmevRobot-e
+			disableOdmevRobot();
+			
 			try {
 				// Uporabnika poizkusimo odjaviti
 				HttpCommands.odjava(imeEditor.getText());
