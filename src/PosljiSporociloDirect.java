@@ -12,7 +12,7 @@ public class PosljiSporociloDirect extends PosljiSporocilo {
 
 	@Override
 	public String toString() {
-		return "PosljiSporociloDirect [global=" + global + ", msg=" + msg + ", prejemnik=" + prejemnik + "]";
+		return "PosljiSporociloDirect [global=" + this.isGlobal() + ", msg=" + this.getMsg() + ", prejemnik=" + prejemnik + "]";
 	}
 
 	@JsonProperty("recipient")

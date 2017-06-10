@@ -1,8 +1,8 @@
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class PosljiSporocilo {
-	protected boolean global;
-	protected String msg;
+	private boolean global;
+	private String msg;
 	
 	protected PosljiSporocilo() { }
 	

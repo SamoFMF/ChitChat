@@ -56,7 +56,7 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 	 * @param input - Input window for your message
 	 */
 	private static final long serialVersionUID = 1L;
-	protected JTextField input;
+	private JTextField input;
 	private JTextField imeEditor;
 	private JButton gumbPrijavi;
 	private JButton gumbOdjavi;
@@ -80,7 +80,7 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 	private int fontSize;
 	private JComboBox<String> whoMenu;
 	private String[] online;
-	protected Map<String, Long> lastActive;
+	private Map<String, Long> lastActive;
 	private JMenuItem miStartRobot;
 	private JSlider robotDelaySlider;
 	private long robotDelay;
@@ -800,7 +800,7 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 				}
 				updateLastActive(i.getPosiljatelj(), i.getSentAt());
 				for (OdmevRobot or : echoRobots) {
-					if (i.getPosiljatelj().equals(or.vzdevek)) {
+					if (i.getPosiljatelj().equals(or.getVzdevek())) {
 						or.newMessage(i.getMsg());
 					}
 				}
@@ -947,7 +947,7 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		int n = echoRobots.size();
 		List<OdmevRobot> odstrani = new ArrayList<OdmevRobot>();
 		for (int i = 0; i < n; i++) {
-			if (echoRobots.get(i).vzdevek.equals(name)) {
+			if (echoRobots.get(i).getVzdevek().equals(name)) {
 				echoRobots.get(i).cancel();
 				odstrani.add(echoRobots.get(i));
 			}
@@ -961,7 +961,6 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		int n = echoRobots.size();
 		List<OdmevRobot> odstrani = new ArrayList<OdmevRobot>();
 		for (int i = 0; i < n; i++) {
-			System.out.println(echoRobots.get(i).vzdevekRobot);
 			echoRobots.get(i).cancel();
 			odstrani.add(echoRobots.get(i));
 		}
@@ -1105,7 +1104,7 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 	public boolean isValidRobot(String name, long delay) {
 		boolean isValid = true;
 		for (OdmevRobot or : echoRobots) {
-			if (or.vzdevek.equals(name) && or.isActive && absValue(delay-or.cas) < 500) isValid = false;
+			if (or.getVzdevek().equals(name) && or.isActive() && absValue(delay-or.getCas()) < 500) isValid = false;
 		}
 		return isValid;
 	}

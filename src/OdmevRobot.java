@@ -1,23 +1,21 @@
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.awt.event.WindowEvent;
-import java.awt.event.WindowListener;
 import java.util.Arrays;
 import java.util.Timer;
 
 public class OdmevRobot implements KeyListener {
-	protected ChatFrame chat;
-	protected String vzdevek;
-	protected long cas;
-	protected String vzdevekRobot;
-	protected boolean isActive;
+	private ChatFrame chat;
+	private String vzdevek;
+	private long cas;
+	private String vzdevekRobot;
+	private boolean isActive;
 	
 	public OdmevRobot(ChatFrame chat, String vzdevek, long cas) {
 		this.chat = chat;
 		this.vzdevek = vzdevek;
 		this.cas = cas;
 		isActive = false;
-		chat.input.addKeyListener(this);
+		chat.getInput().addKeyListener(this);
 		String vmesni = stringCopy(vzdevek);
 		vmesni += "'s echo ";
 		vmesni += Integer.toString((int) cas);
@@ -61,23 +59,63 @@ public class OdmevRobot implements KeyListener {
 		}
 	}
 	
-	@Override
-	public void keyPressed(KeyEvent e) {
-		if (vzdevek.equals(chat.getImeEditor().getText()) && isActive) {
-			if (e.getSource().equals(chat.input)) {
-				if (e.getKeyChar() == '\n') {
-					System.out.println("Sproži timer!");
-					Timer zamik = new Timer();
-					zamik.schedule(new Odmev(this, chat.input.getText()), cas);
-				}
-			}
-		}
-	}
-	
 	public void newMessage(String message) {
 		if (isActive) {
 			Timer zamik = new Timer();
 			zamik.schedule(new Odmev(this, message), cas);
+		}
+	}
+	
+	public ChatFrame getChat() {
+		return chat;
+	}
+
+	public void setChat(ChatFrame chat) {
+		this.chat = chat;
+	}
+
+	public String getVzdevek() {
+		return vzdevek;
+	}
+
+	public void setVzdevek(String vzdevek) {
+		this.vzdevek = vzdevek;
+	}
+
+	public long getCas() {
+		return cas;
+	}
+
+	public void setCas(long cas) {
+		this.cas = cas;
+	}
+
+	public String getVzdevekRobot() {
+		return vzdevekRobot;
+	}
+
+	public void setVzdevekRobot(String vzdevekRobot) {
+		this.vzdevekRobot = vzdevekRobot;
+	}
+
+	public boolean isActive() {
+		return isActive;
+	}
+
+	public void setActive(boolean isActive) {
+		this.isActive = isActive;
+	}
+
+	@Override
+	public void keyPressed(KeyEvent e) {
+		if (vzdevek.equals(chat.getImeEditor().getText()) && isActive) {
+			if (e.getSource().equals(chat.getInput())) {
+				if (e.getKeyChar() == '\n') {
+					System.out.println("Sproži timer!");
+					Timer zamik = new Timer();
+					zamik.schedule(new Odmev(this, chat.getInput().getText()), cas);
+				}
+			}
 		}
 	}
 
