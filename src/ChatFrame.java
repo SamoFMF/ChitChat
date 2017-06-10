@@ -69,7 +69,7 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 	private JTextPane output;
 	private JMenuBar menuBar;
 	private JMenu fileMenu, optionsMenu, robotMenu;
-	private JMenuItem miLogin, miLogout;
+	private JMenuItem miLogin, miLogout, miRobotLogout;
 	private ButtonGroup groupColorsMyName, groupColorsOthers, groupColorsMe, groupColorsMsgOthers, groupColorsBg;
 	private JRadioButtonMenuItem cbRedMyName, cbGreenMyName, cbBlueMyName, cbBlackMyName, cbCyanMyName, cbMagentaMyName, cbOrangeMyName; // Barve za imena pri sporoèilih, ki jih pošlje uporabnik -- Imena imajo cb na zaèetku, ker so prvotni bili CheckBoxi
 	private JRadioButtonMenuItem cbRedOthers, cbGreenOthers, cbBlueOthers, cbBlackOthers, cbCyanOthers, cbMagentaOthers, cbOrangeOthers; // Barve za imena pri sporoèilih, ki jih pošljejo ostali
@@ -386,6 +386,10 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		infoText.setText("Robot will echo whoever\nyou have selected right now.\nIf you have noone selected,\nit will echo your messages.");
 		info.add(infoText);
 		robotMenu.add(info);
+		// Dodamo gumb za odjavo
+		miRobotLogout = new JMenuItem("Stop");
+		miRobotLogout.addActionListener(this);
+		robotMenu.add(miRobotLogout);
 		// Dodamo menu Robot v menuBar
 		menuBar.add(robotMenu);
 		
@@ -892,7 +896,7 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 			HttpCommands.odjava(name);
 			
 			// Uporabniku sporoèimo, da je robota uspešno odjavil
-			adminMessage("Robot " + name + "je bil uspešno odjavljen!");
+			adminMessage("Robot " + name + " je bil uspešno odjavljen!");
 		} catch (Exception e) {
 			if (isOnline(name)) {
 				// Robota nismo uspeli izpisati
@@ -902,6 +906,24 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 				// Nekako se je izpisal, kar nam odgovarja
 				adminMessage("Robot " + name + " je odjavljen!");
 			}
+		}
+	}
+	
+	/**
+	 * Disables all {@code OdmevRobot}'s that echo user named {@code name}
+	 * @param name - username
+	 */
+	public void disableOdmevRobot(String name) {
+		int n = echoRobots.size();
+		List<OdmevRobot> odstrani = new ArrayList<OdmevRobot>();
+		for (int i = 0; i < n; i++) {
+			if (echoRobots.get(i).vzdevek.equals(name)) {
+				echoRobots.get(i).cancel();
+				odstrani.add(echoRobots.get(i));
+			}
+		}
+		for (OdmevRobot or : odstrani) {
+			echoRobots.remove(or);
 		}
 	}
 	
@@ -1053,6 +1075,8 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 				r.activate();
 				echoRobots.add(r);
 			}
+		} else if (e.getSource().equals(miRobotLogout)) {
+			disableOdmevRobot(komuPosiljamo.isEmpty() ? imeEditor.getText() : komuPosiljamo);
 		}
 	}
 	
