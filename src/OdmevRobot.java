@@ -110,7 +110,7 @@ public class OdmevRobot implements KeyListener {
 	public void keyPressed(KeyEvent e) {
 		if (vzdevek.equals(chat.getImeEditor().getText()) && isActive) {
 			if (e.getSource().equals(chat.getInput())) {
-				if (e.getKeyChar() == '\n') {
+				if (e.getKeyChar() == '\n' && !chat.getInput().getText().isEmpty()) {
 					System.out.println("Sproži timer!");
 					Timer zamik = new Timer();
 					zamik.schedule(new Odmev(this, chat.getInput().getText()), cas);

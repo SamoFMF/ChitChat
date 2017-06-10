@@ -1,4 +1,3 @@
-import java.awt.Adjustable;
 import java.awt.Color;
 import java.awt.Container;
 import java.awt.FlowLayout;
@@ -6,8 +5,6 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.AdjustmentEvent;
-import java.awt.event.AdjustmentListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.WindowEvent;
@@ -85,6 +82,7 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 	private JSlider robotDelaySlider;
 	private long robotDelay;
 	private List<OdmevRobot> echoRobots;
+	private JScrollPane drsnikLevo;
 
 	public ChatFrame() {
 		super();
@@ -435,8 +433,7 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		output = new JTextPane();
 		output.setEditable(false);
 		output.setBackground(Color.WHITE);
-		JScrollPane drsnikLevo = new JScrollPane(output);
-		scrollToBottom(drsnikLevo);
+		drsnikLevo = new JScrollPane(output);
 		GridBagConstraints outputConstraint = new GridBagConstraints();
 		outputConstraint.gridx = 0;
 		outputConstraint.gridy = 0;
@@ -607,19 +604,6 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		return checkIfAway(user, 300000);
 	}
 	
-	private void scrollToBottom(JScrollPane scrollPane) {
-	    JScrollBar verticalBar = scrollPane.getVerticalScrollBar();
-	    AdjustmentListener downScroller = new AdjustmentListener() {
-	        @Override
-	        public void adjustmentValueChanged(AdjustmentEvent e) {
-	            Adjustable adjustable = e.getAdjustable();
-	            adjustable.setValue(adjustable.getMaximum());
-	            verticalBar.removeAdjustmentListener(this);
-	        }
-	    };
-	    verticalBar.addAdjustmentListener(downScroller);
-	}
-	
 	public void updateWhoMenu(String[] online) {
 		DefaultComboBoxModel<String> model = new DefaultComboBoxModel<String>(online);
 		String name = komuPosiljamo.isEmpty() ? null : komuPosiljamo;
@@ -633,6 +617,11 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 			model.setSelectedItem(null);
 		}
 		whoMenu.setModel(model);
+	}
+	
+	public void posodobiDrsnikLevo() {
+		JScrollBar vertical = drsnikLevo.getVerticalScrollBar();
+		vertical.setValue(vertical.getMaximum());
 	}
 
 	/**
@@ -655,6 +644,7 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		int len = output.getDocument().getLength();
 		try {
 			output.getDocument().insertString(len, message + '\n', aset);
+			posodobiDrsnikLevo();
 		} catch (BadLocationException e) {
 			// Do tega exceptiona naèeloma ne bi smelo priti, ker vedno postavljamo index na zadnje mesto
 			// v dokumentu, ki ga pa izraèunamo tik pred tem
@@ -687,6 +677,7 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 			} else {
 				output.getDocument().insertString(len, sender + " -> " + recipient + ":  ", aset);
 			}
+			posodobiDrsnikLevo();
 		} catch (BadLocationException e) {
 			// Do tega exceptiona naèeloma ne bi smelo priti, ker vedno postavljamo index na zadnje mesto
 			// v dokumentu, ki ga pa izraèunamo tik pred tem
@@ -718,6 +709,7 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		int len = output.getDocument().getLength();
 		try {
 			output.getDocument().insertString(len, message + '\n', aset);
+			posodobiDrsnikLevo();
 		} catch (BadLocationException e) {
 			// Do tega exceptiona naèeloma ne bi smelo priti, ker vedno postavljamo index na zadnje mesto
 			// v dokumentu, ki ga pa izraèunamo tik pred tem
@@ -1122,7 +1114,7 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 	@Override
 	public void keyTyped(KeyEvent e) {
 		if (e.getSource() == this.input) {
-			if (e.getKeyChar() == '\n') {
+			if (e.getKeyChar() == '\n' && !input.getText().isEmpty()) {
 				sendMessage(imeEditor.getText(), input.getText(), komuPosiljamo);
 			}
 		} else if (e.getSource() == this.imeEditor) {
