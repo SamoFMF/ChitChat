@@ -549,11 +549,13 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 	
 	public void addOnlineUser(String name, boolean isAway) {
 		Color c;
-		if (dosegljivi.getBackground().equals(Color.BLACK)) {
-			c = Color.WHITE;
+		if (name.equals(imeEditor.getText())) {
+			c = colorMyName;
 		} else {
-			c = Color.BLACK;
+			c = colorOthers;
 		}
+		
+		if (dosegljivi.getBackground().equals(Color.BLACK) && c.equals(Color.BLACK)) c = Color.WHITE;
 		
 		StyleContext sc = StyleContext.getDefaultStyleContext();
 		AttributeSet aset = sc.addAttribute(SimpleAttributeSet.EMPTY, StyleConstants.Foreground, c);
@@ -668,6 +670,8 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 			c = colorOthers;
 		}
 		
+		if (dosegljivi.getBackground().equals(Color.BLACK) && c.equals(Color.BLACK)) c = Color.WHITE;
+		
 		StyleContext sc = StyleContext.getDefaultStyleContext();
 		AttributeSet aset = sc.addAttribute(SimpleAttributeSet.EMPTY, StyleConstants.Foreground, c);
 		
@@ -701,6 +705,8 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		} else {
 			c = colorMsgOthers;
 		}
+		
+		if (dosegljivi.getBackground().equals(Color.BLACK) && c.equals(Color.BLACK)) c = Color.WHITE;
 		
 		StyleContext sc = StyleContext.getDefaultStyleContext();
 		AttributeSet aset = sc.addAttribute(SimpleAttributeSet.EMPTY, StyleConstants.Foreground, c);
