@@ -68,12 +68,12 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 	private JMenu fileMenu, optionsMenu, robotMenu;
 	private JMenuItem miLogin, miLogout, miStopRobot;
 	private ButtonGroup groupColorsMyName, groupColorsOthers, groupColorsMe, groupColorsMsgOthers, groupColorsBg;
-	private JRadioButtonMenuItem cbRedMyName, cbGreenMyName, cbBlueMyName, cbBlackMyName, cbCyanMyName, cbMagentaMyName, cbOrangeMyName; // Barve za imena pri sporoèilih, ki jih pošlje uporabnik -- Imena imajo cb na zaèetku, ker so prvotni bili CheckBoxi
-	private JRadioButtonMenuItem cbRedOthers, cbGreenOthers, cbBlueOthers, cbBlackOthers, cbCyanOthers, cbMagentaOthers, cbOrangeOthers; // Barve za imena pri sporoèilih, ki jih pošljejo ostali
-	private JRadioButtonMenuItem cbRedMe, cbGreenMe, cbBlueMe, cbBlackMe, cbCyanMe, cbMagentaMe, cbOrangeMe; // Barve za sporoèila, ki jih pošlje uporabnik
-	private JRadioButtonMenuItem cbRedMsgOthers, cbGreenMsgOthers, cbBlueMsgOthers, cbBlackMsgOthers, cbCyanMsgOthers, cbMagentaMsgOthers, cbOrangeMsgOthers; // Barve za sporoèila, ki jih pošljejo ostali
+	private JRadioButtonMenuItem cbRedMyName, cbGreenMyName, cbBlueMyName, cbBlackMyName, cbCyanMyName, cbMagentaMyName, cbOrangeMyName, cbCustomMyName, cbRandomMyName; // Barve za imena pri sporoèilih, ki jih pošlje uporabnik -- Imena imajo cb na zaèetku, ker so prvotni bili CheckBoxi
+	private JRadioButtonMenuItem cbRedOthers, cbGreenOthers, cbBlueOthers, cbBlackOthers, cbCyanOthers, cbMagentaOthers, cbOrangeOthers, cbCustomOthers, cbRandomOthers; // Barve za imena pri sporoèilih, ki jih pošljejo ostali
+	private JRadioButtonMenuItem cbRedMe, cbGreenMe, cbBlueMe, cbBlackMe, cbCyanMe, cbMagentaMe, cbOrangeMe, cbCustomMe, cbRandomMe; // Barve za sporoèila, ki jih pošlje uporabnik
+	private JRadioButtonMenuItem cbRedMsgOthers, cbGreenMsgOthers, cbBlueMsgOthers, cbBlackMsgOthers, cbCyanMsgOthers, cbMagentaMsgOthers, cbOrangeMsgOthers, cbCustomMsgOthers, cbRandomMsgOthers; // Barve za sporoèila, ki jih pošljejo ostali
 	private JRadioButtonMenuItem cbWhiteBg, cbBlackBg, cbGrayBg;
-	private JSlider fontSizeSlider;
+	private JSlider fontSizeSlider, colorRedSlider, colorGreenSlider, colorBlueSlider;
 	private int fontSize;
 	private JComboBox<String> whoMenu;
 	private String[] online;
@@ -83,6 +83,7 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 	private long robotDelay;
 	private List<OdmevRobot> echoRobots;
 	private JScrollPane drsnikLevo;
+	private JButton buttonConfirm;
 
 	public ChatFrame() {
 		super();
@@ -161,6 +162,8 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		cbCyanMyName = new JRadioButtonMenuItem("Sinje modra");
 		cbMagentaMyName = new JRadioButtonMenuItem("Škrlatna");
 		cbOrangeMyName = new JRadioButtonMenuItem("Oranžna");
+		cbCustomMyName = new JRadioButtonMenuItem("Poljubna");
+		cbRandomMyName = new JRadioButtonMenuItem("Nakljuèna");
 		// Dodamo možnosti v submenu "Color"
 		myName.add(cbBlueMyName);
 		myName.add(cbRedMyName);
@@ -169,6 +172,8 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		myName.add(cbCyanMyName);
 		myName.add(cbMagentaMyName);
 		myName.add(cbOrangeMyName);
+		myName.add(cbCustomMyName);
+		myName.add(cbRandomMyName);
 		// Dodamo te barve v grupo, ki bo poskrbela, da imamo lahko izbrano le 1
 		groupColorsMyName = new ButtonGroup();
 		groupColorsMyName.add(cbBlueMyName);
@@ -178,6 +183,8 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		groupColorsMyName.add(cbCyanMyName);
 		groupColorsMyName.add(cbMagentaMyName);
 		groupColorsMyName.add(cbOrangeMyName);
+		groupColorsMyName.add(cbCustomMyName);
+		groupColorsMyName.add(cbRandomMyName);
 		// Dodamo listenerje
 		cbRedMyName.addActionListener(this);
 		cbBlueMyName.addActionListener(this);
@@ -186,6 +193,8 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		cbCyanMyName.addActionListener(this);
 		cbMagentaMyName.addActionListener(this);
 		cbOrangeMyName.addActionListener(this);
+		cbCustomMyName.addActionListener(this);
+		cbRandomMyName.addActionListener(this);
 		// Dodamo "My name" v "Names"
 		namesSubSubMenu.add(myName);
 		// Ustvarimo subsubsubmenu "Others"
@@ -197,6 +206,8 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		cbCyanOthers = new JRadioButtonMenuItem("Sinje modra", true);
 		cbMagentaOthers = new JRadioButtonMenuItem("Škrlatna");
 		cbOrangeOthers = new JRadioButtonMenuItem("Oranžna");
+		cbCustomOthers = new JRadioButtonMenuItem("Poljubna");
+		cbRandomOthers = new JRadioButtonMenuItem("Nakljuèna");
 		// Dodamo možnosti v submenu "Color"
 		otherNames.add(cbBlueOthers);
 		otherNames.add(cbRedOthers);
@@ -205,6 +216,8 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		otherNames.add(cbCyanOthers);
 		otherNames.add(cbMagentaOthers);
 		otherNames.add(cbOrangeOthers);
+		otherNames.add(cbCustomOthers);
+		otherNames.add(cbRandomOthers);
 		// Dodamo te barve v grupo, ki bo poskrbela, da imamo lahko izbrano le 1
 		groupColorsOthers = new ButtonGroup();
 		groupColorsOthers.add(cbBlueOthers);
@@ -214,6 +227,8 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		groupColorsOthers.add(cbCyanOthers);
 		groupColorsOthers.add(cbMagentaOthers);
 		groupColorsOthers.add(cbOrangeOthers);
+		groupColorsOthers.add(cbCustomOthers);
+		groupColorsOthers.add(cbRandomOthers);
 		// Dodamo listenerje
 		cbRedOthers.addActionListener(this);
 		cbBlueOthers.addActionListener(this);
@@ -222,6 +237,8 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		cbCyanOthers.addActionListener(this);
 		cbMagentaOthers.addActionListener(this);
 		cbOrangeOthers.addActionListener(this);
+		cbCustomOthers.addActionListener(this);
+		cbRandomOthers.addActionListener(this);
 		// Dodamo "Others" v "Names"
 		namesSubSubMenu.add(otherNames);
 		// Dodamo "Names" v "Color"
@@ -238,6 +255,8 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		cbCyanMe = new JRadioButtonMenuItem("Sinje modra");
 		cbMagentaMe = new JRadioButtonMenuItem("Škrlatna");
 		cbOrangeMe = new JRadioButtonMenuItem("Oranžna");
+		cbCustomMe = new JRadioButtonMenuItem("Poljubna");
+		cbRandomMe = new JRadioButtonMenuItem("Nakljuèna");
 		// Dodamo možnosti v submenu "Color"
 		myMessages.add(cbBlueMe);
 		myMessages.add(cbRedMe);
@@ -246,6 +265,8 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		myMessages.add(cbCyanMe);
 		myMessages.add(cbMagentaMe);
 		myMessages.add(cbOrangeMe);
+		myMessages.add(cbCustomMe);
+		myMessages.add(cbRandomMe);
 		// Dodamo te barve v grupo, ki bo poskrbela, da imamo lahko izbrano le 1
 		groupColorsMe = new ButtonGroup();
 		groupColorsMe.add(cbBlueMe);
@@ -255,6 +276,8 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		groupColorsMe.add(cbCyanMe);
 		groupColorsMe.add(cbMagentaMe);
 		groupColorsMe.add(cbOrangeMe);
+		groupColorsMe.add(cbCustomMe);
+		groupColorsMe.add(cbRandomMe);
 		// Dodamo listenerje
 		cbRedMe.addActionListener(this);
 		cbBlueMe.addActionListener(this);
@@ -263,6 +286,8 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		cbCyanMe.addActionListener(this);
 		cbMagentaMe.addActionListener(this);
 		cbOrangeMe.addActionListener(this);
+		cbCustomMe.addActionListener(this);
+		cbRandomMe.addActionListener(this);
 		// Dodamo "My messages" v "Messages"
 		messagesSubSubMenu.add(myMessages);
 		// Ustvarimo subsubsubmenu "Other"
@@ -274,6 +299,8 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		cbCyanMsgOthers = new JRadioButtonMenuItem("Sinje modra");
 		cbMagentaMsgOthers = new JRadioButtonMenuItem("Škrlatna");
 		cbOrangeMsgOthers = new JRadioButtonMenuItem("Oranžna", true);
+		cbCustomMsgOthers = new JRadioButtonMenuItem("Poljubna");
+		cbRandomMsgOthers = new JRadioButtonMenuItem("Nakljuèna");
 		// Dodamo možnosti v submenu "Color"
 		otherMessages.add(cbBlueMsgOthers);
 		otherMessages.add(cbRedMsgOthers);
@@ -282,6 +309,8 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		otherMessages.add(cbCyanMsgOthers);
 		otherMessages.add(cbMagentaMsgOthers);
 		otherMessages.add(cbOrangeMsgOthers);
+		otherMessages.add(cbCustomMsgOthers);
+		otherMessages.add(cbRandomMsgOthers);
 		// Dodamo te barve v grupo, ki bo poskrbela, da imamo lahko izbrano le 1
 		groupColorsMsgOthers = new ButtonGroup();
 		groupColorsMsgOthers.add(cbBlueMsgOthers);
@@ -291,6 +320,8 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		groupColorsMsgOthers.add(cbCyanMsgOthers);
 		groupColorsMsgOthers.add(cbMagentaMsgOthers);
 		groupColorsMsgOthers.add(cbOrangeMsgOthers);
+		groupColorsMsgOthers.add(cbCustomMsgOthers);
+		groupColorsMsgOthers.add(cbRandomMsgOthers);
 		// Dodamo listenerje
 		cbRedMsgOthers.addActionListener(this);
 		cbBlueMsgOthers.addActionListener(this);
@@ -299,6 +330,8 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		cbCyanMsgOthers.addActionListener(this);
 		cbMagentaMsgOthers.addActionListener(this);
 		cbOrangeMsgOthers.addActionListener(this);
+		cbCustomMsgOthers.addActionListener(this);
+		cbRandomMsgOthers.addActionListener(this);
 		// Dodamo "Other" v "Messages"
 		messagesSubSubMenu.add(otherMessages);
 		// Dodamo "Messages" v "Colors"
@@ -345,6 +378,49 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		cbBlackBg.addActionListener(this);
 		// Dodamo bg color submenu v menu options
 		optionsMenu.add(bgColorSubMenu);
+		// Ustvarimo slajderje za RGB
+		JMenu rgbColorSubMenu = new JMenu("Ustvari barvo");
+		// Ustvarimo slider za rdeèo barvo
+		JLabel textRedSlider = new JLabel("Red");
+		colorRedSlider = new JSlider(0, 255, 127);
+		colorRedSlider.setMajorTickSpacing(50);
+		colorRedSlider.setMinorTickSpacing(10);
+		colorRedSlider.setPaintTicks(true);
+
+		JLabel textGreenSlider = new JLabel("Green");
+		colorGreenSlider = new JSlider(0, 255, 127);
+		colorGreenSlider.setMajorTickSpacing(50);
+		colorGreenSlider.setMinorTickSpacing(10);
+		colorGreenSlider.setPaintTicks(true);
+		
+		JLabel textBlueSlider = new JLabel("Blue");
+		colorBlueSlider = new JSlider(0, 255, 127);
+		colorBlueSlider.setMajorTickSpacing(50);
+		colorBlueSlider.setMinorTickSpacing(10);
+		colorBlueSlider.setPaintTicks(true);
+
+		buttonConfirm = new JButton("Potrdi");
+		buttonConfirm.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				int r = colorRedSlider.getValue();
+				int g = colorGreenSlider.getValue();
+				int b = colorBlueSlider.getValue();
+				if (cbCustomMyName.isSelected()) colorMyName = new Color(r, g, b);
+				if (cbCustomOthers.isSelected()) colorOthers = new Color(r, g, b);
+				if (cbCustomMe.isSelected()) colorMe = new Color(r, g, b);
+				if (cbCustomMsgOthers.isSelected()) colorMsgOthers = new Color(r, g, b);
+			}
+		});
+		// Dodamo sliderje in potrdi gumb v sub menu
+		rgbColorSubMenu.add(textRedSlider);
+		rgbColorSubMenu.add(colorRedSlider);
+		rgbColorSubMenu.add(textGreenSlider);
+		rgbColorSubMenu.add(colorGreenSlider);
+		rgbColorSubMenu.add(textBlueSlider);
+		rgbColorSubMenu.add(colorBlueSlider);
+		rgbColorSubMenu.add(buttonConfirm);
+		// Dodamo v "Options"
+		optionsMenu.add(rgbColorSubMenu);
 		// Dodamo menu "Options" v menuBar
 		menuBar.add(optionsMenu);
 		
@@ -356,7 +432,7 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		// Dodamo v menu Robot
 		robotMenu.add(miStartRobot);
 		
-		// Ustvarimo menu "Font Size"
+		// Ustvarimo menu "Delay"
 		JMenu robotDelaySubMenu = new JMenu("Nastavi zamik");
 		robotDelaySlider = new JSlider(1000, 10000, 2500);
 		robotDelaySlider.setMajorTickSpacing(3000);
@@ -1036,6 +1112,16 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 			colorMyName = Color.MAGENTA;
 		} else if (e.getSource().equals(cbOrangeMyName)) {
 			colorMyName = Color.ORANGE;
+		} else if (e.getSource().equals(cbCustomMyName)) {
+			int r = colorRedSlider.getValue();
+			int g = colorGreenSlider.getValue();
+			int b = colorBlueSlider.getValue();
+			colorMyName = new Color(r, g, b);
+		} else if (e.getSource().equals(cbRandomMyName)) {
+			int r = (int) (Math.random() * 255);
+			int g = (int) (Math.random() * 255);
+			int b = (int) (Math.random() * 255);
+			colorMyName = new Color(r, g, b);
 		} else if (e.getSource().equals(cbRedOthers)) {
 			colorOthers = Color.RED;
 		} else if (e.getSource().equals(cbBlueOthers)) {
@@ -1050,6 +1136,16 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 			colorOthers = Color.MAGENTA;
 		} else if (e.getSource().equals(cbOrangeOthers)) {
 			colorOthers = Color.ORANGE;
+		} else if (e.getSource().equals(cbCustomOthers)) {
+			int r = colorRedSlider.getValue();
+			int g = colorGreenSlider.getValue();
+			int b = colorBlueSlider.getValue();
+			colorOthers = new Color(r, g, b);
+		} else if (e.getSource().equals(cbRandomOthers)) {
+			int r = (int) (Math.random() * 255);
+			int g = (int) (Math.random() * 255);
+			int b = (int) (Math.random() * 255);
+			colorOthers = new Color(r, g, b);
 		} else if (e.getSource().equals(cbRedMe)) {
 			colorMe = Color.RED;
 		} else if (e.getSource().equals(cbBlueMe)) {
@@ -1064,6 +1160,16 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 			colorMe = Color.MAGENTA;
 		} else if (e.getSource().equals(cbOrangeMe)) {
 			colorMe = Color.ORANGE;
+		} else if (e.getSource().equals(cbCustomMe)) {
+			int r = colorRedSlider.getValue();
+			int g = colorGreenSlider.getValue();
+			int b = colorBlueSlider.getValue();
+			colorMe = new Color(r, g, b);
+		} else if (e.getSource().equals(cbRandomMe)) {
+			int r = (int) (Math.random() * 255);
+			int g = (int) (Math.random() * 255);
+			int b = (int) (Math.random() * 255);
+			colorMe = new Color(r, g, b);
 		} else if (e.getSource().equals(cbRedMsgOthers)) {
 			colorMsgOthers = Color.RED;
 		} else if (e.getSource().equals(cbBlueMsgOthers)) {
@@ -1078,6 +1184,16 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 			colorMsgOthers = Color.MAGENTA;
 		} else if (e.getSource().equals(cbOrangeMsgOthers)) {
 			colorMsgOthers = Color.ORANGE;
+		} else if (e.getSource().equals(cbCustomMsgOthers)) {
+			int r = colorRedSlider.getValue();
+			int g = colorGreenSlider.getValue();
+			int b = colorBlueSlider.getValue();
+			colorMsgOthers = new Color(r, g, b);
+		} else if (e.getSource().equals(cbRandomMsgOthers)) {
+			int r = (int) (Math.random() * 255);
+			int g = (int) (Math.random() * 255);
+			int b = (int) (Math.random() * 255);
+			colorMsgOthers = new Color(r, g, b);
 		} else if (e.getSource().equals(cbWhiteBg)) {
 			output.setBackground(Color.WHITE);
 			dosegljivi.setBackground(Color.WHITE);
