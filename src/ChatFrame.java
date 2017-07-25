@@ -83,7 +83,7 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 	private long robotDelay;
 	private List<OdmevRobot> echoRobots;
 	private JScrollPane drsnikLevo;
-	private JButton buttonConfirm;
+	private JButton potrdiMojeIme, potrdiDrugaImena, potrdiMojaSporocila, potrdiDrugaSporocila;
 
 	public ChatFrame() {
 		super();
@@ -398,19 +398,67 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		colorBlueSlider.setMajorTickSpacing(50);
 		colorBlueSlider.setMinorTickSpacing(10);
 		colorBlueSlider.setPaintTicks(true);
-
-		buttonConfirm = new JButton("Potrdi");
-		buttonConfirm.addActionListener(new ActionListener() {
+		
+		// Ustvarimo panela, kamor bomo dali gumbe za potrdit "custom" barvo
+		JPanel panelPotrdiBarvoImena = new JPanel();
+		panelPotrdiBarvoImena.setLayout(new FlowLayout(FlowLayout.CENTER));
+		GridBagConstraints panelPotrdiBarvoImenaConstraint = new GridBagConstraints();
+		panelPotrdiBarvoImenaConstraint.gridx = 0;
+		panelPotrdiBarvoImenaConstraint.gridy = 0;
+		panelPotrdiBarvoImenaConstraint.fill = GridBagConstraints.HORIZONTAL;
+		panelPotrdiBarvoImenaConstraint.weightx = 1;
+		panelPotrdiBarvoImenaConstraint.weighty = 0;
+		
+		JPanel panelPotrdiBarvoSporocila = new JPanel();
+		panelPotrdiBarvoSporocila.setLayout(new FlowLayout(FlowLayout.CENTER));
+		GridBagConstraints panelPotrdiBarvoSporocilaConstraint = new GridBagConstraints();
+		panelPotrdiBarvoSporocilaConstraint.gridx = 0;
+		panelPotrdiBarvoSporocilaConstraint.gridy = 0;
+		panelPotrdiBarvoSporocilaConstraint.fill = GridBagConstraints.HORIZONTAL;
+		panelPotrdiBarvoSporocilaConstraint.weightx = 1;
+		panelPotrdiBarvoSporocilaConstraint.weighty = 0;
+		
+		potrdiMojeIme = new JButton("Moje ime");
+		potrdiMojeIme.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				int r = colorRedSlider.getValue();
 				int g = colorGreenSlider.getValue();
 				int b = colorBlueSlider.getValue();
 				if (cbCustomMyName.isSelected()) colorMyName = new Color(r, g, b);
+			}
+		});
+		potrdiDrugaImena = new JButton("Druga imena");
+		potrdiDrugaImena.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				int r = colorRedSlider.getValue();
+				int g = colorGreenSlider.getValue();
+				int b = colorBlueSlider.getValue();
 				if (cbCustomOthers.isSelected()) colorOthers = new Color(r, g, b);
+			}
+		});
+		potrdiMojaSporocila = new JButton("Moja sporoèila");
+		potrdiMojaSporocila.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				int r = colorRedSlider.getValue();
+				int g = colorGreenSlider.getValue();
+				int b = colorBlueSlider.getValue();
 				if (cbCustomMe.isSelected()) colorMe = new Color(r, g, b);
+			}
+		});
+		potrdiDrugaSporocila = new JButton("Druga sporoèila");
+		potrdiDrugaSporocila.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				int r = colorRedSlider.getValue();
+				int g = colorGreenSlider.getValue();
+				int b = colorBlueSlider.getValue();
 				if (cbCustomMsgOthers.isSelected()) colorMsgOthers = new Color(r, g, b);
 			}
 		});
+		panelPotrdiBarvoImena.add(potrdiMojeIme);
+		panelPotrdiBarvoImena.add(potrdiDrugaImena);
+		panelPotrdiBarvoSporocila.add(potrdiMojaSporocila);
+		panelPotrdiBarvoSporocila.add(potrdiDrugaSporocila);
+		
 		// Dodamo sliderje in potrdi gumb v sub menu
 		rgbColorSubMenu.add(textRedSlider);
 		rgbColorSubMenu.add(colorRedSlider);
@@ -418,7 +466,8 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		rgbColorSubMenu.add(colorGreenSlider);
 		rgbColorSubMenu.add(textBlueSlider);
 		rgbColorSubMenu.add(colorBlueSlider);
-		rgbColorSubMenu.add(buttonConfirm);
+		rgbColorSubMenu.add(panelPotrdiBarvoImena);
+		rgbColorSubMenu.add(panelPotrdiBarvoSporocila);
 		// Dodamo v "Options"
 		optionsMenu.add(rgbColorSubMenu);
 		// Dodamo menu "Options" v menuBar
@@ -456,7 +505,6 @@ public class ChatFrame extends JFrame implements ActionListener, KeyListener, Wi
 		JMenu info = new JMenu("Navodila");
 		JTextArea infoText = new JTextArea();
 		infoText.setText("Robot bo ponavljal sporoèila\nosebe, ki jo imate izbrano.\nÈe nimate nikogar izbranega,\nbo robot ponavljal vaša sporoèila.\nZamiki robotov, ki oponašajo\nisto osebo, se morajo razlikovati\nza vsaj pol sekunde.");
-//		infoText.setText("Robot will echo whoever\nyou have selected right now.\nIf you have noone selected,\nit will echo your messages.");
 		info.add(infoText);
 		robotMenu.add(info);
 		// Dodamo gumb za odjavo
